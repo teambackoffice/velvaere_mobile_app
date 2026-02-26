@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:velvaere_app/view/login_page.dart';
+import 'package:velvaere_app/view/home_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -8,16 +9,21 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Velvaere',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1B4FD8)),
+        useMaterial3: true,
+        fontFamily: 'Roboto',
       ),
-      home: LoginPage(),
+      routes: {
+        '/': (context) => const LoginPage(),
+        '/home': (context) => const HomePage(),
+      },
+      initialRoute: '/home',
     );
   }
 }
