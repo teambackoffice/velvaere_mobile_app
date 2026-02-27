@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:velvaere_app/theme/app_colors.dart';
 import 'package:velvaere_app/view/quotation/create_quotation.dart';
+import 'package:velvaere_app/view/quotation/quotation_list.dart';
 
 // ─── Data Models ─────────────────────────────────────────────────────────
 enum CheckInStatus { notCheckedIn, checkedIn }
@@ -542,7 +543,7 @@ class _HomePageState extends State<HomePage>
         icon: Icons.folder_copy_rounded,
         color: const Color(0xFF7C3AED),
         bgColor: const Color(0xFFF3EEFF),
-        // onTap: () => _navigate(const QuotationListPage()),
+        onTap: () => _navigate(const QuotationListPage()),
       ),
       _QuickActionData(
         title: 'Create Lead',
