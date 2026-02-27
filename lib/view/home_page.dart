@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:velvaere_app/theme/app_colors.dart';
+import 'package:velvaere_app/view/quotation/create_quotation.dart';
 
 // ─── Data Models ─────────────────────────────────────────────────────────
 enum CheckInStatus { notCheckedIn, checkedIn }
@@ -55,6 +56,12 @@ class _HomePageState extends State<HomePage>
   void dispose() {
     _pulseController.dispose();
     super.dispose();
+  }
+
+  // ─── Navigation helper ───────────────────────────────────────────────────
+  void _navigate(Widget page) {
+    HapticFeedback.selectionClick();
+    Navigator.push(context, MaterialPageRoute(builder: (_) => page));
   }
 
   Future<void> _handleCheckIn() async {
@@ -150,7 +157,7 @@ class _HomePageState extends State<HomePage>
                             color: kError,
                           ),
                         ],
-                        onTap: () => HapticFeedback.selectionClick(),
+                        // onTap: () => _navigate(const QuotationListPage()),
                       ),
 
                       const SizedBox(height: 12),
@@ -180,7 +187,7 @@ class _HomePageState extends State<HomePage>
                             color: kSuccess,
                           ),
                         ],
-                        onTap: () => HapticFeedback.selectionClick(),
+                        // onTap: () => _navigate(const LeadListPage()),
                       ),
 
                       const SizedBox(height: 24),
@@ -416,7 +423,7 @@ class _HomePageState extends State<HomePage>
     required Color iconColor,
     required Color iconBg,
     required List<_StatChip> stats,
-    required VoidCallback onTap,
+    VoidCallback? onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -527,6 +534,7 @@ class _HomePageState extends State<HomePage>
         icon: Icons.description_rounded,
         color: kPrimary,
         bgColor: kPrimaryBg,
+        onTap: () => _navigate(const CreateQuotationPage()),
       ),
       _QuickActionData(
         title: 'Quotation List',
@@ -534,6 +542,7 @@ class _HomePageState extends State<HomePage>
         icon: Icons.folder_copy_rounded,
         color: const Color(0xFF7C3AED),
         bgColor: const Color(0xFFF3EEFF),
+        // onTap: () => _navigate(const QuotationListPage()),
       ),
       _QuickActionData(
         title: 'Create Lead',
@@ -541,6 +550,7 @@ class _HomePageState extends State<HomePage>
         icon: Icons.person_add_rounded,
         color: const Color(0xFF0EA5E9),
         bgColor: const Color(0xFFE0F7FF),
+        // onTap: () => _navigate(const CreateLeadPage()),
       ),
       _QuickActionData(
         title: 'Lead List',
@@ -548,6 +558,7 @@ class _HomePageState extends State<HomePage>
         icon: Icons.people_alt_rounded,
         color: const Color(0xFF10B981),
         bgColor: const Color(0xFFD1FAE5),
+        // onTap: () => _navigate(const LeadListPage()),
       ),
     ];
 
@@ -567,7 +578,7 @@ class _HomePageState extends State<HomePage>
 
   Widget _buildActionCard(_QuickActionData data) {
     return GestureDetector(
-      onTap: () => HapticFeedback.selectionClick(),
+      onTap: data.onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -640,6 +651,7 @@ class _QuickActionData {
   final IconData icon;
   final Color color;
   final Color bgColor;
+  final VoidCallback? onTap;
 
   const _QuickActionData({
     required this.title,
@@ -647,6 +659,7 @@ class _QuickActionData {
     required this.icon,
     required this.color,
     required this.bgColor,
+    this.onTap,
   });
 }
 
