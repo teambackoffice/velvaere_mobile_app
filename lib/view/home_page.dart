@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:velvaere_app/theme/app_colors.dart';
+import 'package:velvaere_app/view/lead/create_lead.dart';
 import 'package:velvaere_app/view/quotation/create_quotation.dart';
 import 'package:velvaere_app/view/quotation/quotation_list.dart';
 
@@ -551,7 +552,7 @@ class _HomePageState extends State<HomePage>
         icon: Icons.person_add_rounded,
         color: const Color(0xFF0EA5E9),
         bgColor: const Color(0xFFE0F7FF),
-        // onTap: () => _navigate(const CreateLeadPage()),
+        onTap: () => _navigate(const CreateLeadPage()),
       ),
       _QuickActionData(
         title: 'Lead List',
