@@ -17,11 +17,9 @@ class _CreateLeadPageState extends State<CreateLeadPage> {
   final _emailController = TextEditingController();
   final _notesController = TextEditingController();
 
-  String _status = 'New';
   String _source = 'Manual';
   bool _submitting = false;
 
-  static const _statuses = ['New', 'Follow-up', 'Converted', 'Lost'];
   static const _sources = [
     'Manual',
     'Website',
@@ -30,13 +28,6 @@ class _CreateLeadPageState extends State<CreateLeadPage> {
     'Cold Call',
     'Email Campaign',
   ];
-
-  final Map<String, Color> _statusColors = {
-    'New': kPrimary,
-    'Follow-up': kWarning,
-    'Converted': kSuccess,
-    'Lost': kError,
-  };
 
   @override
   void dispose() {
@@ -208,21 +199,6 @@ class _CreateLeadPageState extends State<CreateLeadPage> {
               ),
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: (_statusColors[_status] ?? kPrimary).withOpacity(0.12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              _status,
-              style: TextStyle(
-                color: _statusColors[_status] ?? kPrimary,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -281,48 +257,6 @@ class _CreateLeadPageState extends State<CreateLeadPage> {
           horizontal: 16,
           vertical: 14,
         ),
-      ),
-    );
-  }
-
-  Widget _buildStatusSelector() {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: kCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: kBorder),
-      ),
-      child: Row(
-        children: _statuses.map((s) {
-          final isSelected = _status == s;
-          final color = _statusColors[s] ?? kPrimary;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () {
-                HapticFeedback.selectionClick();
-                setState(() => _status = s);
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: isSelected ? color : Colors.transparent,
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                child: Text(
-                  s,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : kSubtext,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
       ),
     );
   }
