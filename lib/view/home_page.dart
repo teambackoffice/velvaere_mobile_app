@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:velvaere_app/theme/app_colors.dart';
 import 'package:velvaere_app/view/lead/create_lead.dart';
+import 'package:velvaere_app/view/lead/lead_list.dart';
 import 'package:velvaere_app/view/quotation/create_quotation.dart';
 import 'package:velvaere_app/view/quotation/quotation_list.dart';
 
@@ -135,65 +136,64 @@ class _HomePageState extends State<HomePage>
                       const SizedBox(height: 20),
 
                       // ── Quotation Summary ────────────────────────────
-                      _buildSummaryCard(
-                        title: 'Quotations',
-                        total: _totalQuotations,
-                        totalLabel: 'Total',
-                        icon: Icons.description_rounded,
-                        iconColor: kPrimary,
-                        iconBg: kPrimaryBg,
-                        stats: [
-                          _StatChip(
-                            label: 'Approved',
-                            value: _quotApproved,
-                            color: kSuccess,
-                          ),
-                          _StatChip(
-                            label: 'Pending',
-                            value: _quotPending,
-                            color: kWarning,
-                          ),
-                          _StatChip(
-                            label: 'Rejected',
-                            value: _quotRejected,
-                            color: kError,
-                          ),
-                        ],
-                        // onTap: () => _navigate(const QuotationListPage()),
-                      ),
+                      // _buildSummaryCard(
+                      //   title: 'Quotations',
+                      //   total: _totalQuotations,
+                      //   totalLabel: 'Total',
+                      //   icon: Icons.description_rounded,
+                      //   iconColor: kPrimary,
+                      //   iconBg: kPrimaryBg,
+                      //   stats: [
+                      //     _StatChip(
+                      //       label: 'Approved',
+                      //       value: _quotApproved,
+                      //       color: kSuccess,
+                      //     ),
+                      //     _StatChip(
+                      //       label: 'Pending',
+                      //       value: _quotPending,
+                      //       color: kWarning,
+                      //     ),
+                      //     _StatChip(
+                      //       label: 'Rejected',
+                      //       value: _quotRejected,
+                      //       color: kError,
+                      //     ),
+                      //   ],
+                      //   // onTap: () => _navigate(const QuotationListPage()),
+                      // ),
 
-                      const SizedBox(height: 12),
+                      // const SizedBox(height: 12),
 
                       // ── Lead Summary ─────────────────────────────────
-                      _buildSummaryCard(
-                        title: 'Leads',
-                        total: _totalLeads,
-                        totalLabel: 'Total',
-                        icon: Icons.people_alt_rounded,
-                        iconColor: const Color(0xFF10B981),
-                        iconBg: const Color(0xFFD1FAE5),
-                        stats: [
-                          _StatChip(
-                            label: 'New',
-                            value: _leadsNew,
-                            color: kPrimary,
-                          ),
-                          _StatChip(
-                            label: 'Follow-up',
-                            value: _leadsFollowUp,
-                            color: kWarning,
-                          ),
-                          _StatChip(
-                            label: 'Converted',
-                            value: _leadsConverted,
-                            color: kSuccess,
-                          ),
-                        ],
-                        // onTap: () => _navigate(const LeadListPage()),
-                      ),
+                      // _buildSummaryCard(
+                      //   title: 'Leads',
+                      //   total: _totalLeads,
+                      //   totalLabel: 'Total',
+                      //   icon: Icons.people_alt_rounded,
+                      //   iconColor: const Color(0xFF10B981),
+                      //   iconBg: const Color(0xFFD1FAE5),
+                      //   stats: [
+                      //     _StatChip(
+                      //       label: 'New',
+                      //       value: _leadsNew,
+                      //       color: kPrimary,
+                      //     ),
+                      //     _StatChip(
+                      //       label: 'Follow-up',
+                      //       value: _leadsFollowUp,
+                      //       color: kWarning,
+                      //     ),
+                      //     _StatChip(
+                      //       label: 'Converted',
+                      //       value: _leadsConverted,
+                      //       color: kSuccess,
+                      //     ),
+                      //   ],
+                      //   // onTap: () => _navigate(const LeadListPage()),
+                      // ),
 
-                      const SizedBox(height: 24),
-
+                      // const SizedBox(height: 24),
                       const Text(
                         'Quick Actions',
                         style: TextStyle(
@@ -540,7 +540,7 @@ class _HomePageState extends State<HomePage>
       ),
       _QuickActionData(
         title: 'Quotation List',
-        subtitle: '$_totalQuotations total',
+        subtitle: 'Quote records',
         icon: Icons.folder_copy_rounded,
         color: const Color(0xFF7C3AED),
         bgColor: const Color(0xFFF3EEFF),
@@ -556,11 +556,11 @@ class _HomePageState extends State<HomePage>
       ),
       _QuickActionData(
         title: 'Lead List',
-        subtitle: '$_totalLeads total',
+        subtitle: 'Lead records',
         icon: Icons.people_alt_rounded,
         color: const Color(0xFF10B981),
         bgColor: const Color(0xFFD1FAE5),
-        // onTap: () => _navigate(const LeadListPage()),
+        onTap: () => _navigate(const LeadListPage()),
       ),
     ];
 
@@ -598,11 +598,11 @@ class _HomePageState extends State<HomePage>
         child: Row(
           children: [
             Container(
-              width: 44,
-              height: 44,
+              width: 15,
+              height: 15,
               decoration: BoxDecoration(
                 color: data.bgColor,
-                borderRadius: BorderRadius.circular(13),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(data.icon, color: data.color, size: 22),
             ),
@@ -616,7 +616,7 @@ class _HomePageState extends State<HomePage>
                     data.title,
                     style: const TextStyle(
                       color: kText,
-                      fontSize: 13,
+                      fontSize: 11,
                       fontWeight: FontWeight.w700,
                     ),
                     maxLines: 1,

@@ -119,10 +119,13 @@ class _LoginPageState extends State<LoginPage>
                                   ),
                                 ],
                               ),
-                              child: const Icon(
-                                Icons.bolt_rounded,
-                                color: Colors.white,
-                                size: 38,
+                              child: ClipOval(
+                                child: Image.asset(
+                                  'assets/logo.jpg',
+                                  width: 72,
+                                  height: 72,
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 18),
@@ -209,28 +212,6 @@ class _LoginPageState extends State<LoginPage>
 
                             const SizedBox(height: 12),
 
-                            // Forgot password
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton(
-                                onPressed: () {},
-                                style: TextButton.styleFrom(
-                                  padding: EdgeInsets.zero,
-                                  minimumSize: Size.zero,
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                ),
-                                child: const Text(
-                                  'Forgot password?',
-                                  style: TextStyle(
-                                    color: Color(0xFF7C3AED),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ),
-
                             const SizedBox(height: 28),
 
                             // Login button
@@ -241,8 +222,8 @@ class _LoginPageState extends State<LoginPage>
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
                                     colors: [
-                                      Color(0xFF7C3AED),
-                                      Color(0xFF9333EA),
+                                      Color(0xFF426E4B),
+                                      Color(0xFF426E4B),
                                     ],
                                     begin: Alignment.centerLeft,
                                     end: Alignment.centerRight,
@@ -251,7 +232,7 @@ class _LoginPageState extends State<LoginPage>
                                   boxShadow: [
                                     BoxShadow(
                                       color: const Color(
-                                        0xFF7C3AED,
+                                        0xFF426E4B,
                                       ).withOpacity(0.4),
                                       blurRadius: 20,
                                       offset: const Offset(0, 8),

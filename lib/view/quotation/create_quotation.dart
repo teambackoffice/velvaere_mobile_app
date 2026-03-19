@@ -68,6 +68,30 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
     }
   }
 
+  void _removeItem(int index) {
+    HapticFeedback.mediumImpact();
+    final removed = _items[index];
+    setState(() => _items.removeAt(index));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          removed.name.isNotEmpty
+              ? '"${removed.name}" removed'
+              : 'Item removed',
+        ),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: kError,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        action: SnackBarAction(
+          label: 'Undo',
+          textColor: Colors.white,
+          onPressed: () => setState(() => _items.insert(index, removed)),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -90,7 +114,6 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // ── Customer ─────────────────────────────────
                         _sectionLabel('Customer Details'),
                         const SizedBox(height: 10),
                         _buildTextField(
@@ -101,13 +124,11 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
                           validator: (v) =>
                               v == null || v.trim().isEmpty ? 'Required' : null,
                         ),
-
                         const SizedBox(height: 12),
                         _buildDateField(),
-
                         const SizedBox(height: 24),
 
-                        // ── Items ────────────────────────────────────
+                        // ── Items ─────────────────────────────────────
                         Row(
                           children: [
                             _sectionLabel('Items'),
@@ -148,15 +169,18 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 10),
-                        _buildItemsTable(),
+                        const SizedBox(height: 12),
+
+                        // Card list
+                        ...List.generate(
+                          _items.length,
+                          (i) => _buildItemCard(i),
+                        ),
 
                         const SizedBox(height: 16),
                         _buildTotalRow(),
-
                         const SizedBox(height: 24),
 
-                        // ── Notes ────────────────────────────────────
                         _sectionLabel('Notes / Terms'),
                         const SizedBox(height: 10),
                         _buildTextField(
@@ -166,7 +190,6 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
                           icon: Icons.notes_rounded,
                           maxLines: 4,
                         ),
-
                         const SizedBox(height: 32),
                         _buildSubmitButton(),
                         const SizedBox(height: 16),
@@ -181,6 +204,274 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
       ),
     );
   }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Item card
+  // ─────────────────────────────────────────────────────────────────────────
+
+  Widget _buildItemCard(int index) {
+    final item = _items[index];
+    final canDelete = _items.length > 1;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: kCard,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: kBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // ── Card header bar ──────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: kPrimaryBg,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(13),
+              ),
+            ),
+            child: Row(
+              children: [
+                // Index badge
+                Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: kPrimary,
+                    borderRadius: BorderRadius.circular(7),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '${index + 1}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'Item',
+                    style: TextStyle(
+                      color: kPrimary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 6),
+                // Delete button
+                GestureDetector(
+                  onTap: canDelete ? () => _removeItem(index) : null,
+                  child: Container(
+                    width: 26,
+                    height: 26,
+                    decoration: BoxDecoration(
+                      color: canDelete
+                          ? kError.withOpacity(0.10)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.delete_outline_rounded,
+                      size: 15,
+                      color: canDelete ? kError : kBorder,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Card body ────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            child: Column(
+              children: [
+                // Item name field
+                TextFormField(
+                  initialValue: item.name,
+                  onChanged: (v) => setState(() => item.name = v),
+                  style: const TextStyle(color: kText, fontSize: 13),
+                  decoration: InputDecoration(
+                    labelText: 'Item / Service name',
+                    prefixIcon: const Icon(
+                      Icons.inventory_2_outlined,
+                      color: kSubtext,
+                      size: 16,
+                    ),
+                    labelStyle: const TextStyle(color: kSubtext, fontSize: 12),
+                    filled: true,
+                    fillColor: kSurface,
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: kBorder),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: kPrimary, width: 1.5),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 11,
+                    ),
+                    isDense: true,
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                // Qty + Rate row
+                Row(
+                  children: [
+                    // Qty label + stepper
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Quantity',
+                            style: TextStyle(
+                              color: kSubtext,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: kSurface,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: kBorder),
+                            ),
+                            child: Row(
+                              children: [
+                                _StepButton(
+                                  icon: Icons.remove_rounded,
+                                  onTap: item.qty > 0
+                                      ? () {
+                                          HapticFeedback.selectionClick();
+                                          setState(
+                                            () => item.qty = (item.qty - 1)
+                                                .clamp(0, double.infinity),
+                                          );
+                                        }
+                                      : null,
+                                  left: true,
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    item.qty.toStringAsFixed(0),
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: kText,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                _StepButton(
+                                  icon: Icons.add_rounded,
+                                  onTap: () {
+                                    HapticFeedback.selectionClick();
+                                    setState(() => item.qty += 1);
+                                  },
+                                  left: false,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(width: 10),
+
+                    // Rate
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Rate (₹)',
+                            style: TextStyle(
+                              color: kSubtext,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          TextFormField(
+                            initialValue: item.rate > 0
+                                ? item.rate.toStringAsFixed(0)
+                                : '',
+                            onChanged: (v) => setState(
+                              () => item.rate = double.tryParse(v) ?? 0,
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            style: const TextStyle(color: kText, fontSize: 13),
+                            decoration: InputDecoration(
+                              hintText: '0.00',
+                              hintStyle: TextStyle(
+                                color: kSubtext.withOpacity(0.5),
+                                fontSize: 13,
+                              ),
+                              prefixText: '₹ ',
+                              prefixStyle: const TextStyle(
+                                color: kSubtext,
+                                fontSize: 13,
+                              ),
+                              filled: true,
+                              fillColor: kSurface,
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(color: kBorder),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(
+                                  color: kPrimary,
+                                  width: 1.5,
+                                ),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 11,
+                              ),
+                              isDense: true,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Shared helpers
+  // ─────────────────────────────────────────────────────────────────────────
 
   Widget _buildAppBar() {
     return Container(
@@ -229,17 +520,15 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
     );
   }
 
-  Widget _sectionLabel(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-        color: kText,
-        fontSize: 13,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.1,
-      ),
-    );
-  }
+  Widget _sectionLabel(String text) => Text(
+    text,
+    style: const TextStyle(
+      color: kText,
+      fontSize: 13,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.1,
+    ),
+  );
 
   Widget _buildTextField({
     required TextEditingController controller,
@@ -318,192 +607,6 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
     );
   }
 
-  Widget _buildItemsTable() {
-    return Container(
-      decoration: BoxDecoration(
-        color: kCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: kBorder),
-      ),
-      child: Column(
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: const BoxDecoration(
-              color: kPrimaryBg,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(11)),
-            ),
-            child: const Row(
-              children: [
-                Expanded(
-                  flex: 4,
-                  child: Text(
-                    'Item',
-                    style: TextStyle(
-                      color: kPrimary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    'Qty',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: kPrimary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    'Rate',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: kPrimary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    'Total',
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      color: kPrimary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                SizedBox(width: 32),
-              ],
-            ),
-          ),
-          const Divider(height: 1, color: kBorder),
-          ...List.generate(_items.length, (i) => _buildItemRow(i)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildItemRow(int index) {
-    final item = _items[index];
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            children: [
-              // Item name
-              Expanded(
-                flex: 4,
-                child: TextFormField(
-                  initialValue: item.name,
-                  onChanged: (v) => setState(() => item.name = v),
-                  style: const TextStyle(color: kText, fontSize: 12),
-                  decoration: InputDecoration(
-                    hintText: 'Item name',
-                    hintStyle: TextStyle(
-                      color: kSubtext.withOpacity(0.5),
-                      fontSize: 12,
-                    ),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Qty
-              Expanded(
-                flex: 2,
-                child: TextFormField(
-                  initialValue: item.qty > 0 ? item.qty.toString() : '',
-                  onChanged: (v) =>
-                      setState(() => item.qty = double.tryParse(v) ?? 0),
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: kText, fontSize: 12),
-                  decoration: InputDecoration(
-                    hintText: '0',
-                    hintStyle: TextStyle(
-                      color: kSubtext.withOpacity(0.5),
-                      fontSize: 12,
-                    ),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Rate
-              Expanded(
-                flex: 2,
-                child: TextFormField(
-                  initialValue: item.rate > 0 ? item.rate.toString() : '',
-                  onChanged: (v) =>
-                      setState(() => item.rate = double.tryParse(v) ?? 0),
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: kText, fontSize: 12),
-                  decoration: InputDecoration(
-                    hintText: '0.00',
-                    hintStyle: TextStyle(
-                      color: kSubtext.withOpacity(0.5),
-                      fontSize: 12,
-                    ),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Total
-              Expanded(
-                flex: 2,
-                child: Text(
-                  '₹${item.total.toStringAsFixed(2)}',
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(
-                    color: kText,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Delete
-              GestureDetector(
-                onTap: _items.length > 1
-                    ? () {
-                        HapticFeedback.selectionClick();
-                        setState(() => _items.removeAt(index));
-                      }
-                    : null,
-                child: Icon(
-                  Icons.remove_circle_outline_rounded,
-                  color: _items.length > 1 ? kError : kBorder,
-                  size: 18,
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (index < _items.length - 1) const Divider(height: 1, color: kBorder),
-      ],
-    );
-  }
-
   Widget _buildTotalRow() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -567,6 +670,53 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Step button (left = left-rounded, right = right-rounded border)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _StepButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onTap;
+  final bool left;
+
+  const _StepButton({
+    required this.icon,
+    required this.onTap,
+    required this.left,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          color: onTap != null ? kPrimaryBg : kBorder.withOpacity(0.15),
+          borderRadius: BorderRadius.horizontal(
+            left: left ? const Radius.circular(9) : Radius.zero,
+            right: left ? Radius.zero : const Radius.circular(9),
+          ),
+          border: Border(
+            right: left ? const BorderSide(color: kBorder) : BorderSide.none,
+            left: !left ? const BorderSide(color: kBorder) : BorderSide.none,
+          ),
+        ),
+        child: Icon(
+          icon,
+          size: 16,
+          color: onTap != null ? kPrimary : kSubtext.withOpacity(0.4),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Data model
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _LineItem {
   String name = '';
