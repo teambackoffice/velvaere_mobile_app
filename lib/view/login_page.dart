@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
+import 'package:velvaere_app/controller/login_controller.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -12,8 +12,8 @@ class _LoginPageState extends State<LoginPage>
     with SingleTickerProviderStateMixin {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _loginController = LoginController();
   bool _obscurePassword = true;
-  bool _isLoading = false;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -37,12 +37,18 @@ class _LoginPageState extends State<LoginPage>
           ),
         );
     _animationController.forward();
+
+    // Rebuild the widget whenever LoginController notifies (e.g. isLoading changes)
+    _loginController.addListener(() {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
+    _loginController.dispose();
     _animationController.dispose();
     super.dispose();
   }
@@ -61,9 +67,28 @@ class _LoginPageState extends State<LoginPage>
       );
       return;
     }
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() => _isLoading = false);
+
+    final success = await _loginController.login(
+      _usernameController.text.trim(),
+      _passwordController.text,
+    );
+
+    if (!mounted) return;
+
+    if (success) {
+      Navigator.pushReplacementNamed(context, '/home');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_loginController.errorMessage ?? 'Login failed'),
+          backgroundColor: Colors.red.shade400,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -240,7 +265,9 @@ class _LoginPageState extends State<LoginPage>
                                   ],
                                 ),
                                 child: ElevatedButton(
-                                  onPressed: _isLoading ? null : _handleLogin,
+                                  onPressed: _loginController.isLoading
+                                      ? null
+                                      : _handleLogin,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.transparent,
                                     shadowColor: Colors.transparent,
@@ -248,7 +275,7 @@ class _LoginPageState extends State<LoginPage>
                                       borderRadius: BorderRadius.circular(16),
                                     ),
                                   ),
-                                  child: _isLoading
+                                  child: _loginController.isLoading
                                       ? const SizedBox(
                                           width: 22,
                                           height: 22,

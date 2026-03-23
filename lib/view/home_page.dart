@@ -27,8 +27,8 @@ class _HomePageState extends State<HomePage>
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
-  // Mock data
-  final String _salesPersonName = 'Rajesh Kumar';
+  // User info from secure storage
+  String _salesPersonName = '';
 
   // Quotation stats
   final int _quotApproved = 12;
@@ -244,10 +244,18 @@ class _HomePageState extends State<HomePage>
                 ),
               ],
             ),
-            child: const Center(
+            child: Center(
               child: Text(
-                'RK',
-                style: TextStyle(
+                _salesPersonName.isNotEmpty
+                    ? _salesPersonName
+                          .trim()
+                          .split(' ')
+                          .where((p) => p.isNotEmpty)
+                          .take(2)
+                          .map((p) => p[0].toUpperCase())
+                          .join()
+                    : '?',
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
@@ -257,6 +265,7 @@ class _HomePageState extends State<HomePage>
             ),
           ),
           const SizedBox(width: 12),
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -281,9 +290,26 @@ class _HomePageState extends State<HomePage>
               ],
             ),
           ),
+
+          /// 🔴 Logout Button
+          IconButton(
+            onPressed: _handleLogout,
+            icon: const Icon(Icons.logout),
+            color: kPrimary,
+            tooltip: 'Logout',
+          ),
         ],
       ),
     );
+  }
+
+  void _handleLogout() async {
+    // Clear stored data (example using SharedPreferences)
+    // final prefs = await SharedPreferences.getInstance();
+    // await prefs.clear();
+
+    // Navigate to login screen
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 
   // ─── Check-In Banner ────────────────────────────────────────────────────
