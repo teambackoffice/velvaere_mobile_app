@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:velvaere_app/controller/logout_controller.dart';
 import 'package:velvaere_app/theme/app_colors.dart';
 import 'package:velvaere_app/view/lead/create_lead.dart';
 import 'package:velvaere_app/view/lead/lead_list.dart';
@@ -304,12 +306,22 @@ class _HomePageState extends State<HomePage>
   }
 
   void _handleLogout() async {
-    // Clear stored data (example using SharedPreferences)
-    // final prefs = await SharedPreferences.getInstance();
-    // await prefs.clear();
+    final controller = context.read<LogoutController>();
 
-    // Navigate to login screen
-    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+    final success = await controller.logout();
+
+    if (success) {
+      // 👉 Clear local data (VERY IMPORTANT)
+      // final prefs = await SharedPreferences.getInstance();
+      // await prefs.clear();
+
+      // 👉 Navigate to login
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Logout failed')));
+    }
   }
 
   // ─── Check-In Banner ────────────────────────────────────────────────────

@@ -98,4 +98,13 @@ class LoginService {
   Future<void> clearStorage() async {
     await secureStorage.deleteAll();
   }
+
+  // ===============================
+  // ✅ SESSION CHECK
+  // ===============================
+
+  Future<bool> isLoggedIn() async {
+    final email = await secureStorage.read(key: 'email');
+    return email != null && email.isNotEmpty;
+  }
 }
