@@ -43,29 +43,29 @@ class LoginService {
       if (response.statusCode == 200) {
         final decoded = json.decode(responseBody);
 
-        // ✅ Check for Frappe-style error response (exc / exc_type in body)
         if (decoded['exc'] != null || decoded['exc_type'] != null) {
           throw Exception('Invalid username or password');
         }
 
-        // ✅ Extract values safely
         final message = decoded['message'];
         final user = message?['user'];
 
-        // ❌ If user is null/missing, credentials were wrong
         if (user == null) {
           throw Exception('Invalid username or password');
         }
 
         final fullName = user['full_name'] ?? '';
         final email = user['email'] ?? '';
+        final sid = message['sid'] ?? ''; // ✅ GET SID
 
         // ✅ Store in secure storage
         await secureStorage.write(key: 'full_name', value: fullName);
         await secureStorage.write(key: 'email', value: email);
+        await secureStorage.write(key: 'sid', value: sid); // ✅ STORE SID
 
         print("✅ Stored Full Name: $fullName");
         print("✅ Stored Email: $email");
+        print("✅ Stored SID: $sid");
 
         return decoded;
       } else {
@@ -89,6 +89,10 @@ class LoginService {
 
   Future<String?> getEmail() async {
     return await secureStorage.read(key: 'email');
+  }
+
+  Future<String?> getSid() async {
+    return await secureStorage.read(key: 'sid');
   }
 
   // ===============================

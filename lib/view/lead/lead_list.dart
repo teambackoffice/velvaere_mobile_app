@@ -1,28 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:velvaere_app/controller/get_lead_controller.dart';
+import 'package:velvaere_app/modal/get_lead_modal.dart';
 import 'package:velvaere_app/theme/app_colors.dart';
 import 'package:velvaere_app/view/lead/create_lead.dart';
 
-// ─── Model ────────────────────────────────────────────────────────────────────
-class LeadModel {
-  final String id;
-  final String name;
-  final String company;
-  final String source;
-  final String status;
-  final DateTime date;
-
-  const LeadModel({
-    required this.id,
-    required this.name,
-    required this.company,
-    required this.source,
-    required this.status,
-    required this.date,
-  });
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
 class LeadListPage extends StatefulWidget {
   const LeadListPage({super.key});
 
@@ -35,83 +18,7 @@ class _LeadListPageState extends State<LeadListPage> {
   String _selectedFilter = 'All';
   String _searchQuery = '';
 
-  // Mock data
-  final List<LeadModel> _all = [
-    LeadModel(
-      id: 'LD-0038',
-      name: 'Ankit Sharma',
-      company: 'Zenith Tech',
-      source: 'Website',
-      status: 'New',
-      date: DateTime(2025, 5, 21),
-    ),
-    LeadModel(
-      id: 'LD-0037',
-      name: 'Priya Nair',
-      company: 'Bloom Retail',
-      source: 'Referral',
-      status: 'Follow-up',
-      date: DateTime(2025, 5, 19),
-    ),
-    LeadModel(
-      id: 'LD-0036',
-      name: 'Rahul Mehta',
-      company: 'Apex Infra',
-      source: 'Cold Call',
-      status: 'Converted',
-      date: DateTime(2025, 5, 17),
-    ),
-    LeadModel(
-      id: 'LD-0035',
-      name: 'Sunita Rao',
-      company: 'GreenLeaf Co.',
-      source: 'Social Media',
-      status: 'New',
-      date: DateTime(2025, 5, 14),
-    ),
-    LeadModel(
-      id: 'LD-0034',
-      name: 'Vikram Joshi',
-      company: 'Prime Logistics',
-      source: 'Email Campaign',
-      status: 'Follow-up',
-      date: DateTime(2025, 5, 12),
-    ),
-    LeadModel(
-      id: 'LD-0033',
-      name: 'Kavya Iyer',
-      company: 'SunCorp',
-      source: 'Website',
-      status: 'Converted',
-      date: DateTime(2025, 5, 9),
-    ),
-    LeadModel(
-      id: 'LD-0032',
-      name: 'Deepak Singh',
-      company: 'Urban Spaces',
-      source: 'Manual',
-      status: 'Lost',
-      date: DateTime(2025, 5, 7),
-    ),
-    LeadModel(
-      id: 'LD-0031',
-      name: 'Meera Pillai',
-      company: 'FastTrack Ltd',
-      source: 'Referral',
-      status: 'New',
-      date: DateTime(2025, 5, 4),
-    ),
-    LeadModel(
-      id: 'LD-0030',
-      name: 'Arjun Reddy',
-      company: 'DataBridge',
-      source: 'Cold Call',
-      status: 'Follow-up',
-      date: DateTime(2025, 5, 2),
-    ),
-  ];
-
-  static const _filters = ['All', 'New', 'Follow-up', 'Converted', 'Lost'];
+  static const _filters = ['All', 'New', 'Converted'];
 
   static const Map<String, Color> _statusColors = {
     'New': kPrimary,
@@ -136,15 +43,28 @@ class _LeadListPageState extends State<LeadListPage> {
     'Manual': Icons.edit_rounded,
   };
 
-  List<LeadModel> get _filtered {
-    return _all.where((l) {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<LeadController>().fetchLeads();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<Message> _filtered(List<Message> all) {
+    return all.where((l) {
       final matchFilter =
           _selectedFilter == 'All' || l.status == _selectedFilter;
       final matchSearch =
           _searchQuery.isEmpty ||
-          l.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          l.company.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          l.id.toLowerCase().contains(_searchQuery.toLowerCase());
+          l.leadName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          l.name.toLowerCase().contains(_searchQuery.toLowerCase());
       return matchFilter && matchSearch;
     }).toList();
   }
@@ -168,14 +88,7 @@ class _LeadListPageState extends State<LeadListPage> {
   }
 
   @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final filtered = _filtered;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -201,30 +114,45 @@ class _LeadListPageState extends State<LeadListPage> {
           ),
         ),
         body: SafeArea(
-          child: Column(
-            children: [
-              _buildAppBar(),
-              _buildSearchBar(),
-              _buildFilterChips(),
-              Expanded(
-                child: filtered.isEmpty
-                    ? _buildEmptyState()
-                    : ListView.separated(
-                        physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                        itemCount: filtered.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (_, i) => _buildCard(filtered[i]),
-                      ),
-              ),
-            ],
+          child: Consumer<LeadController>(
+            builder: (context, controller, _) {
+              final filtered = _filtered(controller.leads);
+              return Column(
+                children: [
+                  _buildAppBar(controller.leads.length),
+                  const SizedBox(height: 10),
+                  _buildSearchBar(),
+                  _buildFilterChips(controller.leads),
+                  Expanded(
+                    child: controller.isLoading
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: Color(0xFF10B981),
+                            ),
+                          )
+                        : controller.error != null
+                        ? _buildErrorState(controller)
+                        : filtered.isEmpty
+                        ? _buildEmptyState()
+                        : ListView.separated(
+                            physics: const BouncingScrollPhysics(),
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                            itemCount: filtered.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 10),
+                            itemBuilder: (_, i) => _buildCard(filtered[i]),
+                          ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
     );
   }
 
-  Widget _buildAppBar() {
+  Widget _buildAppBar(int total) {
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 12, 20, 12),
       decoration: const BoxDecoration(
@@ -251,21 +179,21 @@ class _LeadListPageState extends State<LeadListPage> {
               ),
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: const Color(0xFFD1FAE5),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              '${_all.length} Total',
-              style: const TextStyle(
-                color: Color(0xFF10B981),
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
+          // Container(
+          //   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          //   decoration: BoxDecoration(
+          //     color: const Color(0xFFD1FAE5),
+          //     borderRadius: BorderRadius.circular(8),
+          //   ),
+          //   child: Text(
+          //     '$total Total',
+          //     style: const TextStyle(
+          //       color: Color(0xFF10B981),
+          //       fontSize: 12,
+          //       fontWeight: FontWeight.w600,
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );
@@ -280,7 +208,7 @@ class _LeadListPageState extends State<LeadListPage> {
         onChanged: (v) => setState(() => _searchQuery = v),
         style: const TextStyle(color: kText, fontSize: 14),
         decoration: InputDecoration(
-          hintText: 'Search by name, company or ID…',
+          hintText: 'Search by name or ID…',
           hintStyle: const TextStyle(color: kSubtext, fontSize: 13),
           prefixIcon: const Icon(
             Icons.search_rounded,
@@ -319,7 +247,7 @@ class _LeadListPageState extends State<LeadListPage> {
     );
   }
 
-  Widget _buildFilterChips() {
+  Widget _buildFilterChips(List<Message> all) {
     return Container(
       color: kCard,
       padding: const EdgeInsets.only(bottom: 12),
@@ -332,6 +260,9 @@ class _LeadListPageState extends State<LeadListPage> {
             final color = f == 'All'
                 ? const Color(0xFF10B981)
                 : _statusColors[f] ?? kPrimary;
+            final count = f == 'All'
+                ? all.length
+                : all.where((l) => l.status == f).length;
             return Padding(
               padding: const EdgeInsets.only(right: 8),
               child: GestureDetector(
@@ -373,9 +304,7 @@ class _LeadListPageState extends State<LeadListPage> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
-                          f == 'All'
-                              ? '${_all.length}'
-                              : '${_all.where((l) => l.status == f).length}',
+                          '$count',
                           style: TextStyle(
                             color: isSelected ? Colors.white : kSubtext,
                             fontSize: 10,
@@ -394,7 +323,7 @@ class _LeadListPageState extends State<LeadListPage> {
     );
   }
 
-  Widget _buildCard(LeadModel l) {
+  Widget _buildCard(Message l) {
     final statusColor = _statusColors[l.status] ?? kPrimary;
     final statusBg = _statusBgColors[l.status] ?? kPrimaryBg;
     final sourceIcon = _sourceIcons[l.source] ?? Icons.track_changes_rounded;
@@ -419,7 +348,6 @@ class _LeadListPageState extends State<LeadListPage> {
           children: [
             Row(
               children: [
-                // Avatar
                 Container(
                   width: 40,
                   height: 40,
@@ -429,7 +357,7 @@ class _LeadListPageState extends State<LeadListPage> {
                   ),
                   child: Center(
                     child: Text(
-                      l.name[0],
+                      l.leadName.isNotEmpty ? l.leadName[0].toUpperCase() : '?',
                       style: const TextStyle(
                         color: Color(0xFF10B981),
                         fontWeight: FontWeight.w800,
@@ -444,7 +372,7 @@ class _LeadListPageState extends State<LeadListPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        l.name,
+                        l.leadName,
                         style: const TextStyle(
                           color: kText,
                           fontSize: 14,
@@ -453,7 +381,7 @@ class _LeadListPageState extends State<LeadListPage> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        l.company.isNotEmpty ? l.company : l.id,
+                        l.mobileNo.isNotEmpty ? l.mobileNo : l.name,
                         style: const TextStyle(color: kSubtext, fontSize: 12),
                       ),
                     ],
@@ -491,7 +419,7 @@ class _LeadListPageState extends State<LeadListPage> {
                 ),
                 const SizedBox(width: 5),
                 Text(
-                  _formatDate(l.date),
+                  _formatDate(l.creation),
                   style: const TextStyle(color: kSubtext, fontSize: 12),
                 ),
                 const Spacer(),
@@ -509,6 +437,61 @@ class _LeadListPageState extends State<LeadListPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(LeadController controller) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEE2E2),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Icon(Icons.wifi_off_rounded, color: kError, size: 30),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Failed to load leads',
+            style: TextStyle(
+              color: kText,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            controller.error ?? '',
+            style: const TextStyle(color: kSubtext, fontSize: 12),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.mediumImpact();
+              controller.fetchLeads();
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Text(
+                'Retry',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
