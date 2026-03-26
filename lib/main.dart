@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:velvaere_app/controller/create_lead_controller.dart';
+import 'package:velvaere_app/controller/get_items_controller.dart';
 import 'package:velvaere_app/controller/get_lead_controller.dart';
 import 'package:velvaere_app/controller/get_quotation_controller.dart';
 import 'package:velvaere_app/controller/logout_controller.dart';
@@ -23,6 +24,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => LeadController()),
         ChangeNotifierProvider(create: (_) => CreateLeadController()),
         ChangeNotifierProvider(create: (_) => QuotationController()),
+        ChangeNotifierProvider(create: (_) => GetItemsController()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

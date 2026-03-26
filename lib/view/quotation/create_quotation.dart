@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:velvaere_app/controller/get_items_controller.dart';
 import 'package:velvaere_app/theme/app_colors.dart';
+import '../../modal/get_items_modal.dart';
 
 class CreateQuotationPage extends StatefulWidget {
   const CreateQuotationPage({super.key});
@@ -16,7 +19,15 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
   DateTime? _validUntil;
   bool _submitting = false;
 
+  late final GetItemsController _itemsController;
   final List<_LineItem> _items = [_LineItem()];
+
+  @override
+  void initState() {
+    super.initState();
+    _itemsController = GetItemsController();
+    _itemsController.getItems();
+  }
 
   @override
   void dispose() {
@@ -92,6 +103,33 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
     );
   }
 
+  /// Opens a bottom sheet with a searchable item list
+  Future<void> _pickItem(int index) async {
+    final catalogItems = _itemsController.items;
+    if (catalogItems.isEmpty) return;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: kCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _ItemPickerSheet(
+        catalogItems: catalogItems,
+        onSelected: (msg) {
+          setState(() {
+            _items[index].name = msg.itemName;
+            _items[index].itemCode = msg.itemCode;
+            _items[index].uom = msg.uom;
+            _items[index].rate = msg.priceListRate.toDouble();
+            if (_items[index].qty == 0) _items[index].qty = 1;
+          });
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -128,11 +166,27 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
                         _buildDateField(),
                         const SizedBox(height: 24),
 
-                        // ── Items ─────────────────────────────────────
                         Row(
                           children: [
                             _sectionLabel('Items'),
                             const Spacer(),
+                            // Loading indicator next to label
+                            AnimatedBuilder(
+                              animation: _itemsController,
+                              builder: (_, __) => _itemsController.isLoading
+                                  ? const Padding(
+                                      padding: EdgeInsets.only(right: 8),
+                                      child: SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: kPrimary,
+                                        ),
+                                      ),
+                                    )
+                                  : const SizedBox.shrink(),
+                            ),
                             GestureDetector(
                               onTap: () {
                                 HapticFeedback.selectionClick();
@@ -171,7 +225,6 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
                         ),
                         const SizedBox(height: 12),
 
-                        // Card list
                         ...List.generate(
                           _items.length,
                           (i) => _buildItemCard(i),
@@ -205,10 +258,6 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Item card
-  // ─────────────────────────────────────────────────────────────────────────
-
   Widget _buildItemCard(int index) {
     final item = _items[index];
     final canDelete = _items.length > 1;
@@ -230,18 +279,15 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
       ),
       child: Column(
         children: [
-          // ── Card header bar ──────────────────────────────────────
+          // Header bar
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: kPrimaryBg,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(13),
-              ),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(13)),
             ),
             child: Row(
               children: [
-                // Index badge
                 Container(
                   width: 22,
                   height: 22,
@@ -270,9 +316,6 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
                     ),
                   ),
                 ),
-
-                const SizedBox(width: 6),
-                // Delete button
                 GestureDetector(
                   onTap: canDelete ? () => _removeItem(index) : null,
                   child: Container(
@@ -295,48 +338,94 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
             ),
           ),
 
-          // ── Card body ────────────────────────────────────────────
+          // Body
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
             child: Column(
               children: [
-                // Item name field
-                TextFormField(
-                  initialValue: item.name,
-                  onChanged: (v) => setState(() => item.name = v),
-                  style: const TextStyle(color: kText, fontSize: 13),
-                  decoration: InputDecoration(
-                    labelText: 'Item / Service name',
-                    prefixIcon: const Icon(
-                      Icons.inventory_2_outlined,
-                      color: kSubtext,
-                      size: 16,
-                    ),
-                    labelStyle: const TextStyle(color: kSubtext, fontSize: 12),
-                    filled: true,
-                    fillColor: kSurface,
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: kBorder),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: kPrimary, width: 1.5),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 11,
-                    ),
-                    isDense: true,
+                // ── Item picker button ──────────────────────────────
+                GestureDetector(
+                  onTap: () => _pickItem(index),
+                  child: AnimatedBuilder(
+                    animation: _itemsController,
+                    builder: (_, __) {
+                      final hasItem = item.name.isNotEmpty;
+                      final isLoading = _itemsController.isLoading;
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 11,
+                        ),
+                        decoration: BoxDecoration(
+                          color: kSurface,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: hasItem
+                                ? kPrimary.withOpacity(0.4)
+                                : kBorder,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.inventory_2_outlined,
+                              color: hasItem ? kPrimary : kSubtext,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: isLoading
+                                  ? const Text(
+                                      'Loading items...',
+                                      style: TextStyle(
+                                        color: kSubtext,
+                                        fontSize: 13,
+                                      ),
+                                    )
+                                  : Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          hasItem ? item.name : 'Select item',
+                                          style: TextStyle(
+                                            color: hasItem ? kText : kSubtext,
+                                            fontSize: 13,
+                                            fontWeight: hasItem
+                                                ? FontWeight.w600
+                                                : FontWeight.normal,
+                                          ),
+                                        ),
+                                        if (hasItem && item.uom.isNotEmpty) ...[
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '${item.itemCode}  ·  ${item.uom}',
+                                            style: const TextStyle(
+                                              color: kSubtext,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                            ),
+                            Icon(
+                              Icons.unfold_more_rounded,
+                              color: kSubtext,
+                              size: 16,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                 ),
 
                 const SizedBox(height: 10),
 
-                // Qty + Rate row
+                // Qty + Rate row (unchanged)
                 Row(
                   children: [
-                    // Qty label + stepper
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -397,10 +486,7 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
                         ],
                       ),
                     ),
-
                     const SizedBox(width: 10),
-
-                    // Rate
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -415,6 +501,7 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
                           ),
                           const SizedBox(height: 6),
                           TextFormField(
+                            key: ValueKey('rate_${index}_${item.rate}'),
                             initialValue: item.rate > 0
                                 ? item.rate.toStringAsFixed(0)
                                 : '',
@@ -469,9 +556,7 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Shared helpers
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── All unchanged helpers below ──────────────────────────────────────────
 
   Widget _buildAppBar() {
     return Container(
@@ -672,7 +757,446 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Step button (left = left-rounded, right = right-rounded border)
+// Item Picker Bottom Sheet — Polished UI
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ItemPickerSheet extends StatefulWidget {
+  final List<Message> catalogItems;
+  final ValueChanged<Message> onSelected;
+
+  const _ItemPickerSheet({
+    required this.catalogItems,
+    required this.onSelected,
+  });
+
+  @override
+  State<_ItemPickerSheet> createState() => _ItemPickerSheetState();
+}
+
+class _ItemPickerSheetState extends State<_ItemPickerSheet> {
+  String _query = '';
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<Message> get _filtered => _query.isEmpty
+      ? widget.catalogItems
+      : widget.catalogItems.where((m) {
+          final q = _query.toLowerCase();
+          return m.itemName.toLowerCase().contains(q) ||
+              m.itemCode.toLowerCase().contains(q) ||
+              m.itemGroup.toLowerCase().contains(q);
+        }).toList();
+
+  void _clearSearch() {
+    _searchController.clear();
+    setState(() => _query = '');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.72,
+      minChildSize: 0.42,
+      maxChildSize: 0.95,
+      builder: (_, scrollController) => Container(
+        decoration: const BoxDecoration(
+          color: kCard,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            _SheetHeader(
+              query: _query,
+              controller: _searchController,
+              onChanged: (v) => setState(() => _query = v),
+              onClear: _clearSearch,
+              resultCount: _filtered.length,
+              totalCount: widget.catalogItems.length,
+            ),
+            Expanded(
+              child: _filtered.isEmpty
+                  ? _EmptyState(hasQuery: _query.isNotEmpty)
+                  : _ItemList(
+                      items: _filtered,
+                      scrollController: scrollController,
+                      onSelected: (msg) {
+                        widget.onSelected(msg);
+                        Navigator.pop(context);
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sheet Header
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SheetHeader extends StatelessWidget {
+  final String query;
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+  final int resultCount;
+  final int totalCount;
+
+  const _SheetHeader({
+    required this.query,
+    required this.controller,
+    required this.onChanged,
+    required this.onClear,
+    required this.resultCount,
+    required this.totalCount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: kCard,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Drag handle
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 10, bottom: 14),
+              child: Container(
+                width: 32,
+                height: 3.5,
+                decoration: BoxDecoration(
+                  color: kBorder,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          ),
+          // Title row
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                const Text(
+                  'Select Item',
+                  style: TextStyle(
+                    color: kText,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const Spacer(),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: Text(
+                    query.isEmpty
+                        ? '$totalCount items'
+                        : '$resultCount of $totalCount',
+                    key: ValueKey('$resultCount/$totalCount'),
+                    style: const TextStyle(
+                      color: kSubtext,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Search field
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+              autofocus: true,
+              controller: controller,
+              onChanged: onChanged,
+              style: const TextStyle(color: kText, fontSize: 13.5),
+              decoration: InputDecoration(
+                hintText: 'Search name, code, group…',
+                hintStyle: const TextStyle(color: kSubtext, fontSize: 13.5),
+                prefixIcon: const Padding(
+                  padding: EdgeInsets.only(left: 12, right: 8),
+                  child: Icon(Icons.search_rounded, color: kSubtext, size: 18),
+                ),
+                prefixIconConstraints: const BoxConstraints(),
+                suffixIcon: query.isNotEmpty
+                    ? GestureDetector(
+                        onTap: onClear,
+                        child: const Padding(
+                          padding: EdgeInsets.only(right: 12),
+                          child: Icon(
+                            Icons.cancel_rounded,
+                            color: kSubtext,
+                            size: 17,
+                          ),
+                        ),
+                      )
+                    : null,
+                suffixIconConstraints: const BoxConstraints(),
+                filled: true,
+                fillColor: kSurface,
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: kBorder),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: kPrimary, width: 1.5),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 11,
+                ),
+                isDense: true,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: kBorder),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Item List
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ItemList extends StatelessWidget {
+  final List<Message> items;
+  final ScrollController scrollController;
+  final ValueChanged<Message> onSelected;
+
+  const _ItemList({
+    required this.items,
+    required this.scrollController,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      controller: scrollController,
+      padding: const EdgeInsets.only(top: 6, bottom: 24),
+      itemCount: items.length,
+      itemBuilder: (_, i) {
+        final msg = items[i];
+        return _ItemTile(item: msg, onTap: () => onSelected(msg));
+      },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Item Tile
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ItemTile extends StatelessWidget {
+  final Message item;
+  final VoidCallback onTap;
+
+  const _ItemTile({required this.item, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        splashColor: kPrimary.withOpacity(0.06),
+        highlightColor: kPrimary.withOpacity(0.04),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Item icon placeholder
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: kSurface,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: kBorder),
+                ),
+                child: Center(
+                  child: Text(
+                    item.itemName.isNotEmpty
+                        ? item.itemName[0].toUpperCase()
+                        : '?',
+                    style: const TextStyle(
+                      color: kSubtext,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Name + meta
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.itemName,
+                      style: const TextStyle(
+                        color: kText,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        height: 1.3,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        _MetaChip(label: item.itemCode),
+                        const SizedBox(width: 5),
+                        _MetaDot(),
+                        const SizedBox(width: 5),
+                        Flexible(
+                          child: Text(
+                            item.itemGroup,
+                            style: const TextStyle(
+                              color: kSubtext,
+                              fontSize: 11,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              // Price + UOM
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '₹${item.priceListRate}',
+                    style: const TextStyle(
+                      color: kPrimary,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    item.uom,
+                    style: const TextStyle(color: kSubtext, fontSize: 10.5),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Supporting widgets
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _MetaChip extends StatelessWidget {
+  final String label;
+  const _MetaChip({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+      decoration: BoxDecoration(
+        color: kSurface,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: kBorder),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: kSubtext,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w500,
+          letterSpacing: 0.2,
+        ),
+      ),
+    );
+  }
+}
+
+class _MetaDot extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 3,
+      height: 3,
+      decoration: BoxDecoration(color: kBorder, shape: BoxShape.circle),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Empty State
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _EmptyState extends StatelessWidget {
+  final bool hasQuery;
+  const _EmptyState({required this.hasQuery});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            hasQuery ? Icons.search_off_rounded : Icons.inventory_2_outlined,
+            size: 36,
+            color: kSubtext.withOpacity(0.4),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            hasQuery ? 'No items match your search' : 'No items available',
+            style: TextStyle(
+              color: kSubtext.withOpacity(0.7),
+              fontSize: 13.5,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          if (hasQuery) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Try a different name, code, or group',
+              style: TextStyle(color: kSubtext.withOpacity(0.5), fontSize: 12),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+// Step button
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _StepButton extends StatelessWidget {
@@ -720,6 +1244,8 @@ class _StepButton extends StatelessWidget {
 
 class _LineItem {
   String name = '';
+  String itemCode = '';
+  String uom = '';
   double qty = 0;
   double rate = 0;
   double get total => qty * rate;
