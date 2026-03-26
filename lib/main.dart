@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:velvaere_app/controller/create_lead_controller.dart';
 import 'package:velvaere_app/controller/get_lead_controller.dart';
 import 'package:velvaere_app/controller/logout_controller.dart';
 import 'package:velvaere_app/view/login_page.dart';
@@ -19,6 +20,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => LogoutController()),
         ChangeNotifierProvider(create: (_) => LeadController()),
+        ChangeNotifierProvider(create: (_) => CreateLeadController()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:velvaere_app/theme/app_colors.dart';
+import 'package:velvaere_app/controller/create_lead_controller.dart';
 
 class CreateLeadPage extends StatefulWidget {
   const CreateLeadPage({super.key});
@@ -12,40 +14,49 @@ class CreateLeadPage extends StatefulWidget {
 class _CreateLeadPageState extends State<CreateLeadPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _companyController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _notesController = TextEditingController();
 
-  String _source = 'Manual';
-  bool _submitting = false;
+  String _source = 'Advertisement';
 
   static const _sources = [
-    'Manual',
-    'Website',
-    'Referral',
-    'Social Media',
-    'Cold Call',
-    'Email Campaign',
+    'Walk In',
+    'Campaign',
+    'Mass Mailing',
+    'Supplier Reference',
+    'Advertisement',
+    'Exhibition',
+    'Cold Calling',
+    'Reference',
+    'Existing Customer',
+    'Customer\'s Vendor',
   ];
 
   @override
   void dispose() {
     _nameController.dispose();
-    _companyController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
     _notesController.dispose();
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit(CreateLeadController controller) async {
     if (!_formKey.currentState!.validate()) return;
     HapticFeedback.mediumImpact();
-    setState(() => _submitting = true);
-    await Future.delayed(const Duration(milliseconds: 1500));
-    setState(() => _submitting = false);
-    if (mounted) {
+
+    await controller.createLead(
+      name: _nameController.text.trim(),
+      phone: _phoneController.text.trim(),
+      email: _emailController.text.trim(),
+      source: _source,
+      note: _notesController.text.trim(),
+    );
+
+    if (!mounted) return;
+
+    if (controller.isSuccess) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Lead created successfully!'),
@@ -57,117 +68,127 @@ class _CreateLeadPageState extends State<CreateLeadPage> {
         ),
       );
       Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(controller.errorMessage ?? 'Failed to create lead'),
+          backgroundColor: kError,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-      ),
-      child: Scaffold(
-        backgroundColor: kSurface,
-        body: SafeArea(
-          child: Column(
-            children: [
-              _buildAppBar(),
-              Expanded(
-                child: Form(
-                  key: _formKey,
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // ── Lead Info ─────────────────────────────────
-                        _sectionLabel('Lead Information'),
-                        const SizedBox(height: 10),
-                        _buildTextField(
-                          controller: _nameController,
-                          label: 'Lead Name',
-                          hint: 'e.g. John Doe',
-                          icon: Icons.person_rounded,
-                          validator: (v) =>
-                              v == null || v.trim().isEmpty ? 'Required' : null,
+    return ChangeNotifierProvider(
+      create: (_) => CreateLeadController(),
+      child: Consumer<CreateLeadController>(
+        builder: (context, controller, _) {
+          return AnnotatedRegion<SystemUiOverlayStyle>(
+            value: const SystemUiOverlayStyle(
+              statusBarColor: Colors.transparent,
+              statusBarIconBrightness: Brightness.dark,
+            ),
+            child: Scaffold(
+              backgroundColor: kSurface,
+              body: SafeArea(
+                child: Column(
+                  children: [
+                    _buildAppBar(),
+                    Expanded(
+                      child: Form(
+                        key: _formKey,
+                        child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _sectionLabel('Lead Information'),
+                              const SizedBox(height: 10),
+                              _buildTextField(
+                                controller: _nameController,
+                                label: 'Lead Name',
+                                hint: 'e.g. John Doe',
+                                icon: Icons.person_rounded,
+                                validator: (v) => v == null || v.trim().isEmpty
+                                    ? 'Required'
+                                    : null,
+                              ),
+
+                              const SizedBox(height: 24),
+
+                              _sectionLabel('Contact Details'),
+                              const SizedBox(height: 10),
+                              _buildTextField(
+                                controller: _phoneController,
+                                label: 'Phone',
+                                hint: '+91 98765 43210',
+                                icon: Icons.phone_rounded,
+                                keyboardType: TextInputType.phone,
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty)
+                                    return null;
+                                  if (v.trim().length < 7)
+                                    return 'Invalid phone';
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 12),
+                              _buildTextField(
+                                controller: _emailController,
+                                label: 'Email',
+                                hint: 'john@company.com',
+                                icon: Icons.email_rounded,
+                                keyboardType: TextInputType.emailAddress,
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty)
+                                    return null;
+                                  if (!v.contains('@')) return 'Invalid email';
+                                  return null;
+                                },
+                              ),
+
+                              const SizedBox(height: 24),
+
+                              _buildDropdown(
+                                label: 'Source',
+                                value: _source,
+                                icon: Icons.track_changes_rounded,
+                                items: _sources,
+                                onChanged: (v) => setState(() => _source = v!),
+                              ),
+
+                              const SizedBox(height: 24),
+
+                              _sectionLabel('Notes'),
+                              const SizedBox(height: 10),
+                              _buildTextField(
+                                controller: _notesController,
+                                label: 'Notes',
+                                hint: 'Additional context, requirements...',
+                                icon: Icons.notes_rounded,
+                                maxLines: 4,
+                              ),
+
+                              const SizedBox(height: 32),
+                              _buildSubmitButton(controller),
+                              const SizedBox(height: 16),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 12),
-                        _buildTextField(
-                          controller: _companyController,
-                          label: 'Company',
-                          hint: 'e.g. Acme Corp',
-                          icon: Icons.business_rounded,
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // ── Contact ───────────────────────────────────
-                        _sectionLabel('Contact Details'),
-                        const SizedBox(height: 10),
-                        _buildTextField(
-                          controller: _phoneController,
-                          label: 'Phone',
-                          hint: '+91 98765 43210',
-                          icon: Icons.phone_rounded,
-                          keyboardType: TextInputType.phone,
-                          validator: (v) {
-                            if (v == null || v.trim().isEmpty) return null;
-                            if (v.trim().length < 7) return 'Invalid phone';
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        _buildTextField(
-                          controller: _emailController,
-                          label: 'Email',
-                          hint: 'john@company.com',
-                          icon: Icons.email_rounded,
-                          keyboardType: TextInputType.emailAddress,
-                          validator: (v) {
-                            if (v == null || v.trim().isEmpty) return null;
-                            if (!v.contains('@')) return 'Invalid email';
-                            return null;
-                          },
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // ── Status & Source ───────────────────────────
-                        const SizedBox(height: 12),
-                        _buildDropdown(
-                          label: 'Source',
-                          value: _source,
-                          icon: Icons.track_changes_rounded,
-                          items: _sources,
-                          onChanged: (v) => setState(() => _source = v!),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // ── Notes ─────────────────────────────────────
-                        _sectionLabel('Notes'),
-                        const SizedBox(height: 10),
-                        _buildTextField(
-                          controller: _notesController,
-                          label: 'Notes',
-                          hint: 'Additional context, requirements...',
-                          icon: Icons.notes_rounded,
-                          maxLines: 4,
-                        ),
-
-                        const SizedBox(height: 32),
-                        _buildSubmitButton(),
-                        const SizedBox(height: 16),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -298,12 +319,13 @@ class _CreateLeadPageState extends State<CreateLeadPage> {
     );
   }
 
-  Widget _buildSubmitButton() {
+  Widget _buildSubmitButton(CreateLeadController controller) {
+    final isLoading = controller.isLoading;
     return SizedBox(
       width: double.infinity,
       height: 52,
       child: ElevatedButton(
-        onPressed: _submitting ? null : _submit,
+        onPressed: isLoading ? null : () => _submit(controller),
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF10B981),
           foregroundColor: Colors.white,
@@ -313,7 +335,7 @@ class _CreateLeadPageState extends State<CreateLeadPage> {
           ),
           elevation: 0,
         ),
-        child: _submitting
+        child: isLoading
             ? const SizedBox(
                 width: 20,
                 height: 20,

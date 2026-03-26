@@ -13,14 +13,14 @@ class _SplashScreenState extends State<SplashScreen>
   final LoginService _loginService = LoginService();
 
   late AnimationController _logoController;
-  late AnimationController _ringController;
+  late AnimationController _glowController;
   late AnimationController _textController;
   late AnimationController _dotController;
 
   late Animation<double> _logoScale;
   late Animation<double> _logoOpacity;
-  late Animation<double> _ringScale;
-  late Animation<double> _ringOpacity;
+  late Animation<double> _glowScale;
+  late Animation<double> _glowOpacity;
   late Animation<double> _textOpacity;
   late Animation<Offset> _textSlide;
   late Animation<double> _dotOpacity;
@@ -48,19 +48,19 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-    // Ripple ring: expands outward and fades
-    _ringController = AnimationController(
+    // Soft breathing glow behind logo
+    _glowController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 1800),
     );
-    _ringScale = Tween<double>(
-      begin: 0.8,
-      end: 2.2,
-    ).animate(CurvedAnimation(parent: _ringController, curve: Curves.easeOut));
-    _ringOpacity = Tween<double>(
-      begin: 0.6,
-      end: 0.0,
-    ).animate(CurvedAnimation(parent: _ringController, curve: Curves.easeOut));
+    _glowScale = Tween<double>(
+      begin: 0.9,
+      end: 1.15,
+    ).animate(CurvedAnimation(parent: _glowController, curve: Curves.easeInOut));
+    _glowOpacity = Tween<double>(
+      begin: 0.3,
+      end: 0.7,
+    ).animate(CurvedAnimation(parent: _glowController, curve: Curves.easeInOut));
 
     // Text: slide up + fade in
     _textController = AnimationController(
@@ -92,9 +92,9 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(const Duration(milliseconds: 200));
     _logoController.forward();
 
-    // 2. Ring ripple after logo lands
+    // 2. Glow starts breathing after logo lands
     await Future.delayed(const Duration(milliseconds: 500));
-    _ringController.forward();
+    _glowController.repeat(reverse: true);
 
     // 3. Text slides up
     await Future.delayed(const Duration(milliseconds: 200));
@@ -122,7 +122,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void dispose() {
     _logoController.dispose();
-    _ringController.dispose();
+    _glowController.dispose();
     _textController.dispose();
     _dotController.dispose();
     super.dispose();
@@ -131,70 +131,50 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF2D5436),
+      backgroundColor: const Color(0xFF0A1F14),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF3A6B44), Color(0xFF2D5436), Color(0xFF1E3D27)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF0A1F14), Color(0xFF1A3D26), Color(0xFF0F2B1A)],
           ),
         ),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo with ripple ring
+              // Logo with soft breathing glow
               SizedBox(
-                width: 160,
-                height: 160,
+                width: 200,
+                height: 200,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Ripple ring
+                    // Soft radial glow — breathes continuously
                     AnimatedBuilder(
-                      animation: _ringController,
+                      animation: _glowController,
                       builder: (_, __) => Transform.scale(
-                        scale: _ringScale.value,
+                        scale: _glowScale.value,
                         child: Opacity(
-                          opacity: _ringOpacity.value,
+                          opacity: _glowOpacity.value,
                           child: Container(
-                            width: 100,
-                            height: 100,
+                            width: 180,
+                            height: 180,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
+                              gradient: RadialGradient(
+                                colors: [
+                                  const Color(0xFF4CAF50).withOpacity(0.45),
+                                  const Color(0xFF2E7D32).withOpacity(0.15),
+                                  Colors.transparent,
+                                ],
+                                stops: const [0.0, 0.5, 1.0],
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    // Second delayed ring
-                    AnimatedBuilder(
-                      animation: _ringController,
-                      builder: (_, __) {
-                        final delayed = (_ringController.value - 0.2).clamp(
-                          0.0,
-                          1.0,
-                        );
-                        return Transform.scale(
-                          scale: 0.8 + delayed * 1.4,
-                          child: Opacity(
-                            opacity: (0.4 - delayed * 0.4).clamp(0.0, 0.4),
-                            child: Container(
-                              width: 100,
-                              height: 100,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 1.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
                     ),
                     // Logo
                     AnimatedBuilder(
@@ -203,41 +183,15 @@ class _SplashScreenState extends State<SplashScreen>
                         scale: _logoScale.value,
                         child: Opacity(
                           opacity: _logoOpacity.value,
-                          child: Container(
-                            width: 96,
-                            height: 96,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.12),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.3),
-                                width: 1.5,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.25),
-                                  blurRadius: 24,
-                                  offset: const Offset(0, 8),
-                                ),
-                                BoxShadow(
-                                  color: const Color(
-                                    0xFF426E4B,
-                                  ).withOpacity(0.5),
-                                  blurRadius: 32,
-                                  spreadRadius: 4,
-                                ),
-                              ],
-                            ),
-                            child: ClipOval(
-                              child: Image.asset(
-                                'assets/logo.jpg',
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const Icon(
-                                  Icons.eco_rounded,
-                                  color: Colors.white,
-                                  size: 48,
-                                ),
-                              ),
+                          child: Image.asset(
+                            'assets/logo.png',
+                            width: 150,
+                            height: 150,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.eco_rounded,
+                              color: Colors.white,
+                              size: 80,
                             ),
                           ),
                         ),
@@ -276,6 +230,10 @@ class _SplashScreenState extends State<SplashScreen>
               const SizedBox(height: 56),
 
               // Animated loading dots
+              FadeTransition(
+                opacity: _dotOpacity,
+                child: const _PulsingDots(),
+              ),
             ],
           ),
         ),
