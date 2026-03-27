@@ -11,7 +11,7 @@ import 'package:velvaere_app/view/quotation/create_quotation.dart';
 import 'package:velvaere_app/view/quotation/quotation_list.dart';
 
 // ─── Data Models ─────────────────────────────────────────────────────────
-enum CheckInStatus { notCheckedIn, checkedIn }
+enum CheckInStatus { notCheckedIn, checkedIn, checkedOut }
 
 // ─── HomePage Widget ──────────────────────────────────────────────────────
 class HomePage extends StatefulWidget {
@@ -25,7 +25,9 @@ class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
   CheckInStatus _checkInStatus = CheckInStatus.notCheckedIn;
   String _checkInTime = '';
+  String _checkOutTime = '';
   bool _checkingIn = false;
+  bool _checkingOut = false;
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -82,7 +84,7 @@ class _HomePageState extends State<HomePage>
   }
 
   Future<void> _handleCheckIn() async {
-    if (_checkInStatus == CheckInStatus.checkedIn) return;
+    if (_checkInStatus != CheckInStatus.notCheckedIn) return;
     HapticFeedback.mediumImpact();
     setState(() => _checkingIn = true);
     await Future.delayed(const Duration(milliseconds: 1800));
@@ -94,6 +96,20 @@ class _HomePageState extends State<HomePage>
       _checkInStatus = CheckInStatus.checkedIn;
       _checkInTime = '$hour:$minute $period';
       _checkingIn = false;
+    });
+    HapticFeedback.lightImpact();
+  }
+
+  Future<void> _handleCheckOut() async {
+    if (_checkInStatus != CheckInStatus.checkedIn) return;
+    HapticFeedback.mediumImpact();
+    setState(() => _checkingOut = true);
+    await Future.delayed(const Duration(milliseconds: 1800));
+    setState(() {
+      _checkInStatus = CheckInStatus.notCheckedIn;
+      _checkInTime = '';
+      _checkOutTime = '';
+      _checkingOut = false;
     });
     HapticFeedback.lightImpact();
   }
@@ -339,130 +355,225 @@ class _HomePageState extends State<HomePage>
   // ─── Check-In Banner ────────────────────────────────────────────────────
   Widget _buildCheckInBanner() {
     final isCheckedIn = _checkInStatus == CheckInStatus.checkedIn;
+    final isCheckedOut = _checkInStatus == CheckInStatus.checkedOut;
+    final isNotCheckedIn = _checkInStatus == CheckInStatus.notCheckedIn;
+
+    // Gradient colours per state
+    final List<Color> gradientColors = isCheckedOut
+        ? [const Color(0xFF374151), const Color(0xFF4B5563)] // slate/dark
+        : isCheckedIn
+            ? [const Color(0xFF16A34A), const Color(0xFF22C55E)] // green
+            : [kPrimary, kPrimaryLight]; // brand
+
+    final Color shadowColor = isCheckedOut
+        ? const Color(0xFF374151)
+        : isCheckedIn
+            ? kSuccess
+            : kPrimary;
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 400),
       curve: Curves.easeOutCubic,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: isCheckedIn
-              ? [const Color(0xFF16A34A), const Color(0xFF22C55E)]
-              : [kPrimary, kPrimaryLight],
+          colors: gradientColors,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: (isCheckedIn ? kSuccess : kPrimary).withOpacity(0.35),
+            color: shadowColor.withOpacity(0.35),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.18),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: isCheckedIn
-                ? const Icon(
-                    Icons.location_on_rounded,
+      child: isCheckedOut
+          // ── Checked-Out summary row ──────────────────────────────────
+          ? Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.check_circle_outline_rounded,
                     color: Colors.white,
                     size: 24,
-                  )
-                : ScaleTransition(
-                    scale: _pulseAnimation,
-                    child: const Icon(
-                      Icons.location_off_rounded,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isCheckedIn
-                      ? 'Checked In at $_checkInTime'
-                      : 'Not Checked In',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  isCheckedIn
-                      ? 'GPS location recorded ✓'
-                      : 'Tap to record attendance',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.85),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (!isCheckedIn)
-            GestureDetector(
-              onTap: _checkingIn ? null : _handleCheckIn,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: _checkingIn
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          color: kPrimary,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Text(
-                        'Check In',
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Day Complete',
                         style: TextStyle(
-                          color: kPrimary,
-                          fontSize: 13,
+                          color: Colors.white,
+                          fontSize: 15,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-              ),
-            )
-          else
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.white.withOpacity(0.4)),
-              ),
-              child: const Text(
-                '✓ Active',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                      const SizedBox(height: 2),
+                      Text(
+                        'In: $_checkInTime  ·  Out: $_checkOutTime',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.85),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.4),
+                    ),
+                  ),
+                  child: const Text(
+                    '✓ Done',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            )
+          // ── Not-checked-in / Checked-in row ─────────────────────────
+          : Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: isCheckedIn
+                      ? const Icon(
+                          Icons.location_on_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        )
+                      : ScaleTransition(
+                          scale: _pulseAnimation,
+                          child: const Icon(
+                            Icons.location_off_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isCheckedIn
+                            ? 'Checked In at $_checkInTime'
+                            : 'Not Checked In',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isCheckedIn
+                            ? 'GPS location recorded ✓'
+                            : 'Tap to record attendance',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.85),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isNotCheckedIn)
+                  GestureDetector(
+                    onTap: _checkingIn ? null : _handleCheckIn,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: _checkingIn
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                color: kPrimary,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              'Check In',
+                              style: TextStyle(
+                                color: kPrimary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                    ),
+                  )
+                else
+                  // ── Check-Out button (shown while checked in) ────────
+                  GestureDetector(
+                    onTap: _checkingOut ? null : _handleCheckOut,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: _checkingOut
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                color: Color(0xFFDC2626),
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              'Check Out',
+                              style: TextStyle(
+                                color: Color(0xFFDC2626),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                    ),
+                  ),
+              ],
             ),
-        ],
-      ),
     );
   }
 
