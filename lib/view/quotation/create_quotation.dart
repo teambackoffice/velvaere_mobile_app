@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:velvaere_app/controller/create_quotation_controller.dart';
 import 'package:velvaere_app/controller/get_customer_list_controller.dart';
 import 'package:velvaere_app/controller/get_items_controller.dart';
 import 'package:velvaere_app/modal/get_customer_modal.dart';
@@ -15,12 +16,12 @@ class CreateQuotationPage extends StatefulWidget {
 
 class _CreateQuotationPageState extends State<CreateQuotationPage> {
   final _formKey = GlobalKey<FormState>();
-  final _notesController = TextEditingController();
   DateTime? _validUntil;
   bool _submitting = false;
 
   late final GetItemsController _itemsController;
   late final GetCustomerController _customerController;
+  late final CreateQuotationController _createController;
 
   CustomerMessage? _selectedCustomer;
   final List<_LineItem> _items = [_LineItem()];
@@ -32,11 +33,12 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
     _itemsController.getItems();
     _customerController = GetCustomerController();
     _customerController.getCustomers();
+    _createController = CreateQuotationController();
   }
 
   @override
   void dispose() {
-    _notesController.dispose();
+    _createController.dispose();
     super.dispose();
   }
 
@@ -76,15 +78,48 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
       );
       return;
     }
+
+    final hasEmptyItem = _items.any((item) => item.name.isEmpty);
+    if (hasEmptyItem) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please select an item for all rows'),
+          backgroundColor: kError,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) return;
+
     HapticFeedback.mediumImpact();
     setState(() => _submitting = true);
 
-    // TODO: pass _selectedCustomer!.name as the customer field in your API call
-    await Future.delayed(const Duration(milliseconds: 1500));
+    final apiItems = _items
+        .map(
+          (item) => {
+            'item_code': item.itemCode,
+            'qty': item.qty,
+            'rate': item.rate,
+            'uom': item.uom,
+          },
+        )
+        .toList();
+
+    await _createController.createQuotation(
+      partyName: _selectedCustomer!.name,
+      items: apiItems,
+    );
 
     setState(() => _submitting = false);
-    if (mounted) {
+
+    if (!mounted) return;
+
+    if (_createController.isSuccess) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Quotation created successfully!'),
@@ -96,6 +131,19 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
         ),
       );
       Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _createController.errorMessage ?? 'Failed to create quotation',
+          ),
+          backgroundColor: kError,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
     }
   }
 
@@ -191,7 +239,7 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
                       children: [
                         _sectionLabel('Customer Details'),
                         const SizedBox(height: 10),
-                        _buildCustomerField(), // ← replaced
+                        _buildCustomerField(),
                         const SizedBox(height: 12),
                         _buildDateField(),
                         const SizedBox(height: 24),
@@ -263,15 +311,6 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
                         _buildTotalRow(),
                         const SizedBox(height: 24),
 
-                        _sectionLabel('Notes / Terms'),
-                        const SizedBox(height: 10),
-                        _buildTextField(
-                          controller: _notesController,
-                          label: 'Notes / Terms',
-                          hint: 'Payment terms, delivery notes...',
-                          icon: Icons.notes_rounded,
-                          maxLines: 4,
-                        ),
                         const SizedBox(height: 32),
                         _buildSubmitButton(),
                         const SizedBox(height: 16),
@@ -286,8 +325,6 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
       ),
     );
   }
-
-  // ── NEW: Customer picker field ─────────────────────────────────────────────
 
   Widget _buildCustomerField() {
     return AnimatedBuilder(
@@ -373,8 +410,6 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
       },
     );
   }
-
-  // ── Unchanged helpers ──────────────────────────────────────────────────────
 
   Widget _buildItemCard(int index) {
     final item = _items[index];
@@ -690,21 +725,6 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
               style: TextStyle(
                 color: kText,
                 fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: kPrimaryBg,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              '₹${_subtotal.toStringAsFixed(2)}',
-              style: const TextStyle(
-                color: kPrimary,
-                fontSize: 13,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -1215,7 +1235,7 @@ class _CustomerEmptyState extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Item Picker (unchanged from original)
+// Item Picker
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ItemPickerSheet extends StatefulWidget {

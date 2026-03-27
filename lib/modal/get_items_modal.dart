@@ -35,8 +35,8 @@ class Message {
   String uom;
   dynamic image;
   String priceList;
-  double priceListRate;
-  String currency;
+  dynamic priceListRate;
+  dynamic currency;
 
   Message({
     required this.itemCode,

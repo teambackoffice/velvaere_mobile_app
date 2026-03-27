@@ -11,7 +11,7 @@ class CreateQuotationService {
     required List<Map<String, dynamic>> items,
   }) async {
     final url = Uri.parse(
-      '${ApiConstants.baseUrl}/api/method/maternal_care.maternal_care.api.mobile_api.create_quotation_mobile',
+      '${ApiConstants.baseUrl}maternal_care.maternal_care.api.mobile_api.create_quotation_mobile',
     );
 
     String? sid = await _storage.read(key: 'sid');
@@ -19,6 +19,7 @@ class CreateQuotationService {
     final headers = {
       'Authorization': 'token $sid',
       'Content-Type': 'application/json',
+      'Cookie': 'sid=$sid',
     };
 
     final body = json.encode({
@@ -32,25 +33,13 @@ class CreateQuotationService {
     try {
       final response = await http.post(url, headers: headers, body: body);
 
-      // 🔥 PRINT EVERYTHING
-      print("========== API RESPONSE ==========");
-      print("Status Code: ${response.statusCode}");
-      print("Headers: ${response.headers}");
-      print("Body: ${response.body}");
-
       // Optional: Pretty JSON print
       try {
         final decoded = jsonDecode(response.body);
-        print("Decoded Body: ${jsonEncode(decoded)}");
-      } catch (e) {
-        print("Body is not JSON");
-      }
-
-      print("==================================");
+      } catch (e) {}
 
       return response;
     } catch (e) {
-      print("❌ API ERROR: $e");
       rethrow;
     }
   }

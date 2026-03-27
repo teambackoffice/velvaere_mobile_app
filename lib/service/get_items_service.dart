@@ -38,6 +38,7 @@ class GetItemsService {
         throw Exception('Failed to load items: ${response.statusCode}');
       }
     } catch (e) {
+      print("Error: $e");
       rethrow;
     }
   }
