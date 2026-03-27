@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
+import 'package:velvaere_app/controller/get_customer_list_controller.dart';
 import 'package:velvaere_app/controller/get_items_controller.dart';
+import 'package:velvaere_app/modal/get_customer_modal.dart';
 import 'package:velvaere_app/theme/app_colors.dart';
 import '../../modal/get_items_modal.dart';
 
@@ -14,12 +15,14 @@ class CreateQuotationPage extends StatefulWidget {
 
 class _CreateQuotationPageState extends State<CreateQuotationPage> {
   final _formKey = GlobalKey<FormState>();
-  final _customerController = TextEditingController();
   final _notesController = TextEditingController();
   DateTime? _validUntil;
   bool _submitting = false;
 
   late final GetItemsController _itemsController;
+  late final GetCustomerController _customerController;
+
+  CustomerMessage? _selectedCustomer;
   final List<_LineItem> _items = [_LineItem()];
 
   @override
@@ -27,11 +30,12 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
     super.initState();
     _itemsController = GetItemsController();
     _itemsController.getItems();
+    _customerController = GetCustomerController();
+    _customerController.getCustomers();
   }
 
   @override
   void dispose() {
-    _customerController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -59,10 +63,26 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
   }
 
   Future<void> _submit() async {
+    if (_selectedCustomer == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please select a customer'),
+          backgroundColor: kError,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+      return;
+    }
     if (!_formKey.currentState!.validate()) return;
     HapticFeedback.mediumImpact();
     setState(() => _submitting = true);
+
+    // TODO: pass _selectedCustomer!.name as the customer field in your API call
     await Future.delayed(const Duration(milliseconds: 1500));
+
     setState(() => _submitting = false);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -103,7 +123,6 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
     );
   }
 
-  /// Opens a bottom sheet with a searchable item list
   Future<void> _pickItem(int index) async {
     final catalogItems = _itemsController.items;
     if (catalogItems.isEmpty) return;
@@ -126,6 +145,24 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
             if (_items[index].qty == 0) _items[index].qty = 1;
           });
         },
+      ),
+    );
+  }
+
+  Future<void> _pickCustomer() async {
+    final customers = _customerController.customerList;
+    if (customers.isEmpty) return;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: kCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _CustomerPickerSheet(
+        customers: customers,
+        onSelected: (customer) => setState(() => _selectedCustomer = customer),
       ),
     );
   }
@@ -154,14 +191,7 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
                       children: [
                         _sectionLabel('Customer Details'),
                         const SizedBox(height: 10),
-                        _buildTextField(
-                          controller: _customerController,
-                          label: 'Customer Name',
-                          hint: 'e.g. Acme Corp',
-                          icon: Icons.business_rounded,
-                          validator: (v) =>
-                              v == null || v.trim().isEmpty ? 'Required' : null,
-                        ),
+                        _buildCustomerField(), // ← replaced
                         const SizedBox(height: 12),
                         _buildDateField(),
                         const SizedBox(height: 24),
@@ -170,7 +200,6 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
                           children: [
                             _sectionLabel('Items'),
                             const Spacer(),
-                            // Loading indicator next to label
                             AnimatedBuilder(
                               animation: _itemsController,
                               builder: (_, __) => _itemsController.isLoading
@@ -258,6 +287,95 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
     );
   }
 
+  // ── NEW: Customer picker field ─────────────────────────────────────────────
+
+  Widget _buildCustomerField() {
+    return AnimatedBuilder(
+      animation: _customerController,
+      builder: (_, __) {
+        final isLoading = _customerController.isLoading;
+        final hasCustomer = _selectedCustomer != null;
+
+        return GestureDetector(
+          onTap: isLoading ? null : _pickCustomer,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: kCard,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: hasCustomer ? kPrimary.withOpacity(0.4) : kBorder,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.business_rounded,
+                  color: hasCustomer ? kPrimary : kSubtext,
+                  size: 18,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: isLoading
+                      ? const Text(
+                          'Loading customers...',
+                          style: TextStyle(color: kSubtext, fontSize: 14),
+                        )
+                      : hasCustomer
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _selectedCustomer!.customerName,
+                              style: const TextStyle(
+                                color: kText,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _selectedCustomer!.name +
+                                  (_selectedCustomer!.mobileNo != null
+                                      ? '  ·  ${_selectedCustomer!.mobileNo}'
+                                      : ''),
+                              style: const TextStyle(
+                                color: kSubtext,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        )
+                      : const Text(
+                          'Select customer',
+                          style: TextStyle(color: kSubtext, fontSize: 14),
+                        ),
+                ),
+                if (isLoading)
+                  const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: kPrimary,
+                    ),
+                  )
+                else
+                  const Icon(
+                    Icons.unfold_more_rounded,
+                    color: kSubtext,
+                    size: 18,
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ── Unchanged helpers ──────────────────────────────────────────────────────
+
   Widget _buildItemCard(int index) {
     final item = _items[index];
     final canDelete = _items.length > 1;
@@ -279,7 +397,6 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
       ),
       child: Column(
         children: [
-          // Header bar
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: const BoxDecoration(
@@ -337,13 +454,10 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
               ],
             ),
           ),
-
-          // Body
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
             child: Column(
               children: [
-                // ── Item picker button ──────────────────────────────
                 GestureDetector(
                   onTap: () => _pickItem(index),
                   child: AnimatedBuilder(
@@ -409,7 +523,7 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
                                       ],
                                     ),
                             ),
-                            Icon(
+                            const Icon(
                               Icons.unfold_more_rounded,
                               color: kSubtext,
                               size: 16,
@@ -420,10 +534,7 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
                     },
                   ),
                 ),
-
                 const SizedBox(height: 10),
-
-                // Qty + Rate row (unchanged)
                 Row(
                   children: [
                     Expanded(
@@ -555,8 +666,6 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
       ),
     );
   }
-
-  // ── All unchanged helpers below ──────────────────────────────────────────
 
   Widget _buildAppBar() {
     return Container(
@@ -757,23 +866,23 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Item Picker Bottom Sheet — Polished UI
+// Customer Picker Bottom Sheet
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _ItemPickerSheet extends StatefulWidget {
-  final List<Message> catalogItems;
-  final ValueChanged<Message> onSelected;
+class _CustomerPickerSheet extends StatefulWidget {
+  final List<CustomerMessage> customers;
+  final ValueChanged<CustomerMessage> onSelected;
 
-  const _ItemPickerSheet({
-    required this.catalogItems,
+  const _CustomerPickerSheet({
+    required this.customers,
     required this.onSelected,
   });
 
   @override
-  State<_ItemPickerSheet> createState() => _ItemPickerSheetState();
+  State<_CustomerPickerSheet> createState() => _CustomerPickerSheetState();
 }
 
-class _ItemPickerSheetState extends State<_ItemPickerSheet> {
+class _CustomerPickerSheetState extends State<_CustomerPickerSheet> {
   String _query = '';
   final _searchController = TextEditingController();
 
@@ -783,19 +892,15 @@ class _ItemPickerSheetState extends State<_ItemPickerSheet> {
     super.dispose();
   }
 
-  List<Message> get _filtered => _query.isEmpty
-      ? widget.catalogItems
-      : widget.catalogItems.where((m) {
+  List<CustomerMessage> get _filtered => _query.isEmpty
+      ? widget.customers
+      : widget.customers.where((c) {
           final q = _query.toLowerCase();
-          return m.itemName.toLowerCase().contains(q) ||
-              m.itemCode.toLowerCase().contains(q) ||
-              m.itemGroup.toLowerCase().contains(q);
+          return c.customerName.toLowerCase().contains(q) ||
+              c.name.toLowerCase().contains(q) ||
+              (c.mobileNo?.toLowerCase().contains(q) ?? false) ||
+              (c.customerGroup?.toLowerCase().contains(q) ?? false);
         }).toList();
-
-  void _clearSearch() {
-    _searchController.clear();
-    setState(() => _query = '');
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -811,23 +916,33 @@ class _ItemPickerSheetState extends State<_ItemPickerSheet> {
         ),
         child: Column(
           children: [
-            _SheetHeader(
+            _CustomerSheetHeader(
               query: _query,
               controller: _searchController,
               onChanged: (v) => setState(() => _query = v),
-              onClear: _clearSearch,
+              onClear: () {
+                _searchController.clear();
+                setState(() => _query = '');
+              },
               resultCount: _filtered.length,
-              totalCount: widget.catalogItems.length,
+              totalCount: widget.customers.length,
             ),
             Expanded(
               child: _filtered.isEmpty
-                  ? _EmptyState(hasQuery: _query.isNotEmpty)
-                  : _ItemList(
-                      items: _filtered,
-                      scrollController: scrollController,
-                      onSelected: (msg) {
-                        widget.onSelected(msg);
-                        Navigator.pop(context);
+                  ? _CustomerEmptyState(hasQuery: _query.isNotEmpty)
+                  : ListView.builder(
+                      controller: scrollController,
+                      padding: const EdgeInsets.only(top: 6, bottom: 24),
+                      itemCount: _filtered.length,
+                      itemBuilder: (_, i) {
+                        final c = _filtered[i];
+                        return _CustomerTile(
+                          customer: c,
+                          onTap: () {
+                            widget.onSelected(c);
+                            Navigator.pop(context);
+                          },
+                        );
                       },
                     ),
             ),
@@ -838,11 +953,7 @@ class _ItemPickerSheetState extends State<_ItemPickerSheet> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Sheet Header
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _SheetHeader extends StatelessWidget {
+class _CustomerSheetHeader extends StatelessWidget {
   final String query;
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
@@ -850,7 +961,7 @@ class _SheetHeader extends StatelessWidget {
   final int resultCount;
   final int totalCount;
 
-  const _SheetHeader({
+  const _CustomerSheetHeader({
     required this.query,
     required this.controller,
     required this.onChanged,
@@ -869,7 +980,6 @@ class _SheetHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Drag handle
           Center(
             child: Padding(
               padding: const EdgeInsets.only(top: 10, bottom: 14),
@@ -883,13 +993,12 @@ class _SheetHeader extends StatelessWidget {
               ),
             ),
           ),
-          // Title row
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
                 const Text(
-                  'Select Item',
+                  'Select Customer',
                   style: TextStyle(
                     color: kText,
                     fontSize: 16,
@@ -902,7 +1011,7 @@ class _SheetHeader extends StatelessWidget {
                   duration: const Duration(milliseconds: 200),
                   child: Text(
                     query.isEmpty
-                        ? '$totalCount items'
+                        ? '$totalCount customers'
                         : '$resultCount of $totalCount',
                     key: ValueKey('$resultCount/$totalCount'),
                     style: const TextStyle(
@@ -916,7 +1025,6 @@ class _SheetHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          // Search field
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TextField(
@@ -972,9 +1080,346 @@ class _SheetHeader extends StatelessWidget {
   }
 }
 
+class _CustomerTile extends StatelessWidget {
+  final CustomerMessage customer;
+  final VoidCallback onTap;
+
+  const _CustomerTile({required this.customer, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        splashColor: kPrimary.withOpacity(0.06),
+        highlightColor: kPrimary.withOpacity(0.04),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: kSurface,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: kBorder),
+                ),
+                child: Center(
+                  child: Text(
+                    customer.customerName.isNotEmpty
+                        ? customer.customerName[0].toUpperCase()
+                        : '?',
+                    style: const TextStyle(
+                      color: kSubtext,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      customer.customerName,
+                      style: const TextStyle(
+                        color: kText,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        height: 1.3,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        _MetaChip(label: customer.name),
+                        if (customer.customerGroup != null) ...[
+                          const SizedBox(width: 5),
+                          _MetaDot(),
+                          const SizedBox(width: 5),
+                          Flexible(
+                            child: Text(
+                              customer.customerGroup!,
+                              style: const TextStyle(
+                                color: kSubtext,
+                                fontSize: 11,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (customer.mobileNo != null) ...[
+                const SizedBox(width: 10),
+                Text(
+                  customer.mobileNo!,
+                  style: const TextStyle(color: kSubtext, fontSize: 11),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CustomerEmptyState extends StatelessWidget {
+  final bool hasQuery;
+  const _CustomerEmptyState({required this.hasQuery});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            hasQuery ? Icons.search_off_rounded : Icons.business_outlined,
+            size: 36,
+            color: kSubtext.withOpacity(0.4),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            hasQuery
+                ? 'No customers match your search'
+                : 'No customers available',
+            style: TextStyle(
+              color: kSubtext.withOpacity(0.7),
+              fontSize: 13.5,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          if (hasQuery) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Try a different name, code, or group',
+              style: TextStyle(color: kSubtext.withOpacity(0.5), fontSize: 12),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
-// Item List
+// Item Picker (unchanged from original)
 // ─────────────────────────────────────────────────────────────────────────────
+
+class _ItemPickerSheet extends StatefulWidget {
+  final List<Message> catalogItems;
+  final ValueChanged<Message> onSelected;
+
+  const _ItemPickerSheet({
+    required this.catalogItems,
+    required this.onSelected,
+  });
+
+  @override
+  State<_ItemPickerSheet> createState() => _ItemPickerSheetState();
+}
+
+class _ItemPickerSheetState extends State<_ItemPickerSheet> {
+  String _query = '';
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<Message> get _filtered => _query.isEmpty
+      ? widget.catalogItems
+      : widget.catalogItems.where((m) {
+          final q = _query.toLowerCase();
+          return m.itemName.toLowerCase().contains(q) ||
+              m.itemCode.toLowerCase().contains(q) ||
+              m.itemGroup.toLowerCase().contains(q);
+        }).toList();
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.72,
+      minChildSize: 0.42,
+      maxChildSize: 0.95,
+      builder: (_, scrollController) => Container(
+        decoration: const BoxDecoration(
+          color: kCard,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            _SheetHeader(
+              query: _query,
+              controller: _searchController,
+              onChanged: (v) => setState(() => _query = v),
+              onClear: () {
+                _searchController.clear();
+                setState(() => _query = '');
+              },
+              resultCount: _filtered.length,
+              totalCount: widget.catalogItems.length,
+            ),
+            Expanded(
+              child: _filtered.isEmpty
+                  ? _EmptyState(hasQuery: _query.isNotEmpty)
+                  : _ItemList(
+                      items: _filtered,
+                      scrollController: scrollController,
+                      onSelected: (msg) {
+                        widget.onSelected(msg);
+                        Navigator.pop(context);
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SheetHeader extends StatelessWidget {
+  final String query;
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+  final int resultCount;
+  final int totalCount;
+
+  const _SheetHeader({
+    required this.query,
+    required this.controller,
+    required this.onChanged,
+    required this.onClear,
+    required this.resultCount,
+    required this.totalCount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: kCard,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 10, bottom: 14),
+              child: Container(
+                width: 32,
+                height: 3.5,
+                decoration: BoxDecoration(
+                  color: kBorder,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                const Text(
+                  'Select Item',
+                  style: TextStyle(
+                    color: kText,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const Spacer(),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: Text(
+                    query.isEmpty
+                        ? '$totalCount items'
+                        : '$resultCount of $totalCount',
+                    key: ValueKey('$resultCount/$totalCount'),
+                    style: const TextStyle(
+                      color: kSubtext,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+              autofocus: true,
+              controller: controller,
+              onChanged: onChanged,
+              style: const TextStyle(color: kText, fontSize: 13.5),
+              decoration: InputDecoration(
+                hintText: 'Search name, code, group…',
+                hintStyle: const TextStyle(color: kSubtext, fontSize: 13.5),
+                prefixIcon: const Padding(
+                  padding: EdgeInsets.only(left: 12, right: 8),
+                  child: Icon(Icons.search_rounded, color: kSubtext, size: 18),
+                ),
+                prefixIconConstraints: const BoxConstraints(),
+                suffixIcon: query.isNotEmpty
+                    ? GestureDetector(
+                        onTap: onClear,
+                        child: const Padding(
+                          padding: EdgeInsets.only(right: 12),
+                          child: Icon(
+                            Icons.cancel_rounded,
+                            color: kSubtext,
+                            size: 17,
+                          ),
+                        ),
+                      )
+                    : null,
+                suffixIconConstraints: const BoxConstraints(),
+                filled: true,
+                fillColor: kSurface,
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: kBorder),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: kPrimary, width: 1.5),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 11,
+                ),
+                isDense: true,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: kBorder),
+        ],
+      ),
+    );
+  }
+}
 
 class _ItemList extends StatelessWidget {
   final List<Message> items;
@@ -1001,10 +1446,6 @@ class _ItemList extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Item Tile
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _ItemTile extends StatelessWidget {
   final Message item;
   final VoidCallback onTap;
@@ -1024,7 +1465,6 @@ class _ItemTile extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Item icon placeholder
               Container(
                 width: 36,
                 height: 36,
@@ -1047,7 +1487,6 @@ class _ItemTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              // Name + meta
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1087,7 +1526,6 @@ class _ItemTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              // Price + UOM
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -1115,7 +1553,7 @@ class _ItemTile extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Supporting widgets
+// Shared supporting widgets
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _MetaChip extends StatelessWidget {
@@ -1146,18 +1584,12 @@ class _MetaChip extends StatelessWidget {
 
 class _MetaDot extends StatelessWidget {
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 3,
-      height: 3,
-      decoration: BoxDecoration(color: kBorder, shape: BoxShape.circle),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+    width: 3,
+    height: 3,
+    decoration: BoxDecoration(color: kBorder, shape: BoxShape.circle),
+  );
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Empty State
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _EmptyState extends StatelessWidget {
   final bool hasQuery;
@@ -1195,9 +1627,6 @@ class _EmptyState extends StatelessWidget {
     );
   }
 }
-// ─────────────────────────────────────────────────────────────────────────────
-// Step button
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _StepButton extends StatelessWidget {
   final IconData icon;
@@ -1237,10 +1666,6 @@ class _StepButton extends StatelessWidget {
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Data model
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _LineItem {
   String name = '';
