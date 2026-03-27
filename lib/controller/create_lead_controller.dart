@@ -26,20 +26,18 @@ class CreateLeadController extends ChangeNotifier {
         "phone": phone,
         "email": email,
         "source": source,
-        "note": note,
+        "notes_html": note,
       },
     );
 
     isLoading = false;
 
     if (response["success"] == true ||
-        (response["message"] != null &&
-            response["success"] != false)) {
+        (response["message"] != null && response["success"] != false)) {
       isSuccess = true;
     } else {
       isSuccess = false;
-      errorMessage =
-          response["message"]?.toString() ?? "Failed to create lead";
+      errorMessage = response["message"]?.toString() ?? "Failed to create lead";
     }
 
     notifyListeners();
