@@ -210,7 +210,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF060F09),
+      backgroundColor: const Color(0xFF0D2A18),
       body: AnimatedBuilder(
         animation: Listenable.merge([
           _ringController,
@@ -229,7 +229,7 @@ class _SplashScreenState extends State<SplashScreen>
                   gradient: RadialGradient(
                     center: Alignment(0, -0.15),
                     radius: 1.2,
-                    colors: [Color(0xFF0D2A18), Color(0xFF060F09)],
+                    colors: [Color(0xFF0D2A18), Color(0xFF0D2A18)],
                   ),
                 ),
                 child: Stack(

@@ -3,6 +3,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:velvaere_app/controller/check_in/get_controller.dart';
+import 'package:velvaere_app/controller/check_in/post_controller.dart';
 import 'package:velvaere_app/controller/logout_controller.dart';
 import 'package:velvaere_app/theme/app_colors.dart';
 import 'package:velvaere_app/view/lead/create_lead.dart';
@@ -26,27 +28,11 @@ class _HomePageState extends State<HomePage>
   CheckInStatus _checkInStatus = CheckInStatus.notCheckedIn;
   String _checkInTime = '';
   String _checkOutTime = '';
-  bool _checkingIn = false;
-  bool _checkingOut = false;
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
-  // User info from secure storage
   String _salesPersonName = '';
-
-  // Quotation stats
-  final int _quotApproved = 12;
-  final int _quotPending = 9;
-  final int _quotRejected = 3;
-
-  // Lead stats
-  final int _leadsNew = 14;
-  final int _leadsFollowUp = 18;
-  final int _leadsConverted = 6;
-
-  int get _totalQuotations => _quotApproved + _quotPending + _quotRejected;
-  int get _totalLeads => _leadsNew + _leadsFollowUp + _leadsConverted;
 
   @override
   void initState() {
@@ -59,6 +45,11 @@ class _HomePageState extends State<HomePage>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
     _loadUserName();
+
+    // Fetch today's checkins after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadTodayCheckins();
+    });
   }
 
   Future<void> _loadUserName() async {
@@ -71,47 +62,170 @@ class _HomePageState extends State<HomePage>
     }
   }
 
+  /// Fetch existing checkins and determine current status
+  Future<void> _loadTodayCheckins() async {
+    final controller = context.read<CheckinController>();
+    await controller.fetchMobileCheckins();
+
+    if (!mounted) return;
+
+    final checkins = controller.checkins;
+    if (checkins.isEmpty) {
+      setState(() => _checkInStatus = CheckInStatus.notCheckedIn);
+      return;
+    }
+
+    // Sort by time descending to get the latest record
+    final sorted = List<dynamic>.from(checkins)
+      ..sort((a, b) {
+        final tA = DateTime.tryParse(a['time'] ?? '') ?? DateTime(2000);
+        final tB = DateTime.tryParse(b['time'] ?? '') ?? DateTime(2000);
+        return tB.compareTo(tA);
+      });
+
+    final latest = sorted.first;
+    final latestLogType = latest['log_type'] ?? '';
+
+    // Find IN and OUT times
+    String inTime = '';
+    String outTime = '';
+    for (final c in sorted.reversed) {
+      if ((c['log_type'] ?? '') == 'IN' && inTime.isEmpty) {
+        inTime = _formatTimeFromString(c['time'] ?? '');
+      }
+      if ((c['log_type'] ?? '') == 'OUT') {
+        outTime = _formatTimeFromString(c['time'] ?? '');
+      }
+    }
+
+    setState(() {
+      if (latestLogType == 'IN') {
+        _checkInStatus = CheckInStatus.checkedIn;
+        _checkInTime = inTime;
+        _checkOutTime = '';
+      } else if (latestLogType == 'OUT') {
+        _checkInStatus = CheckInStatus.checkedOut;
+        _checkInTime = inTime;
+        _checkOutTime = outTime;
+      } else {
+        _checkInStatus = CheckInStatus.notCheckedIn;
+      }
+    });
+  }
+
+  String _formatTimeFromString(String rawTime) {
+    final dt = DateTime.tryParse(rawTime);
+    if (dt == null) return rawTime;
+    final local = dt.toLocal();
+    final tod = TimeOfDay.fromDateTime(local);
+    final hour = tod.hourOfPeriod == 0 ? 12 : tod.hourOfPeriod;
+    final minute = tod.minute.toString().padLeft(2, '0');
+    final period = tod.period == DayPeriod.am ? 'AM' : 'PM';
+    return '$hour:$minute $period';
+  }
+
   @override
   void dispose() {
     _pulseController.dispose();
     super.dispose();
   }
 
-  // ─── Navigation helper ───────────────────────────────────────────────────
   void _navigate(Widget page) {
     HapticFeedback.selectionClick();
     Navigator.push(context, MaterialPageRoute(builder: (_) => page));
   }
 
+  // ─── Check In ────────────────────────────────────────────────────────────
   Future<void> _handleCheckIn() async {
-    if (_checkInStatus != CheckInStatus.notCheckedIn) return;
+    if (_checkInStatus == CheckInStatus.checkedIn) return;
     HapticFeedback.mediumImpact();
-    setState(() => _checkingIn = true);
-    await Future.delayed(const Duration(milliseconds: 1800));
-    final now = TimeOfDay.now();
-    final hour = now.hourOfPeriod == 0 ? 12 : now.hourOfPeriod;
-    final minute = now.minute.toString().padLeft(2, '0');
-    final period = now.period == DayPeriod.am ? 'AM' : 'PM';
-    setState(() {
-      _checkInStatus = CheckInStatus.checkedIn;
-      _checkInTime = '$hour:$minute $period';
-      _checkingIn = false;
-    });
-    HapticFeedback.lightImpact();
+
+    final controller = context.read<EmployeeCheckinController>();
+    final success = await controller.employeeCheckin(logType: 'IN');
+
+    if (!mounted) return;
+
+    if (success) {
+      final now = TimeOfDay.now();
+      final hour = now.hourOfPeriod == 0 ? 12 : now.hourOfPeriod;
+      final minute = now.minute.toString().padLeft(2, '0');
+      final period = now.period == DayPeriod.am ? 'AM' : 'PM';
+      setState(() {
+        _checkInStatus = CheckInStatus.checkedIn;
+        _checkInTime = '$hour:$minute $period';
+        _checkOutTime = '';
+      });
+      HapticFeedback.lightImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            controller.message.isNotEmpty
+                ? controller.message
+                : 'Checked in successfully',
+          ),
+          backgroundColor: kSuccess,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            controller.message.isNotEmpty
+                ? controller.message
+                : 'Check-in failed. Try again.',
+          ),
+          backgroundColor: kError,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
+  // ─── Check Out ───────────────────────────────────────────────────────────
   Future<void> _handleCheckOut() async {
     if (_checkInStatus != CheckInStatus.checkedIn) return;
     HapticFeedback.mediumImpact();
-    setState(() => _checkingOut = true);
-    await Future.delayed(const Duration(milliseconds: 1800));
-    setState(() {
-      _checkInStatus = CheckInStatus.notCheckedIn;
-      _checkInTime = '';
-      _checkOutTime = '';
-      _checkingOut = false;
-    });
-    HapticFeedback.lightImpact();
+
+    final controller = context.read<EmployeeCheckinController>();
+    final success = await controller.employeeCheckin(logType: 'OUT');
+
+    if (!mounted) return;
+
+    if (success) {
+      final now = TimeOfDay.now();
+      final hour = now.hourOfPeriod == 0 ? 12 : now.hourOfPeriod;
+      final minute = now.minute.toString().padLeft(2, '0');
+      final period = now.period == DayPeriod.am ? 'AM' : 'PM';
+      setState(() {
+        _checkInStatus = CheckInStatus.checkedOut;
+        _checkOutTime = '$hour:$minute $period';
+      });
+      HapticFeedback.lightImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            controller.message.isNotEmpty
+                ? controller.message
+                : 'Checked out successfully',
+          ),
+          backgroundColor: kSuccess,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            controller.message.isNotEmpty
+                ? controller.message
+                : 'Check-out failed. Try again.',
+          ),
+          backgroundColor: kError,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   String get _greeting {
@@ -144,6 +258,9 @@ class _HomePageState extends State<HomePage>
 
   @override
   Widget build(BuildContext context) {
+    // Listen to EmployeeCheckinController for isLoading
+    final checkinCtrl = context.watch<EmployeeCheckinController>();
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -162,68 +279,8 @@ class _HomePageState extends State<HomePage>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildCheckInBanner(),
+                      _buildCheckInBanner(checkinCtrl.isLoading),
                       const SizedBox(height: 20),
-
-                      // ── Quotation Summary ────────────────────────────
-                      // _buildSummaryCard(
-                      //   title: 'Quotations',
-                      //   total: _totalQuotations,
-                      //   totalLabel: 'Total',
-                      //   icon: Icons.description_rounded,
-                      //   iconColor: kPrimary,
-                      //   iconBg: kPrimaryBg,
-                      //   stats: [
-                      //     _StatChip(
-                      //       label: 'Approved',
-                      //       value: _quotApproved,
-                      //       color: kSuccess,
-                      //     ),
-                      //     _StatChip(
-                      //       label: 'Pending',
-                      //       value: _quotPending,
-                      //       color: kWarning,
-                      //     ),
-                      //     _StatChip(
-                      //       label: 'Rejected',
-                      //       value: _quotRejected,
-                      //       color: kError,
-                      //     ),
-                      //   ],
-                      //   // onTap: () => _navigate(const QuotationListPage()),
-                      // ),
-
-                      // const SizedBox(height: 12),
-
-                      // ── Lead Summary ─────────────────────────────────
-                      // _buildSummaryCard(
-                      //   title: 'Leads',
-                      //   total: _totalLeads,
-                      //   totalLabel: 'Total',
-                      //   icon: Icons.people_alt_rounded,
-                      //   iconColor: const Color(0xFF10B981),
-                      //   iconBg: const Color(0xFFD1FAE5),
-                      //   stats: [
-                      //     _StatChip(
-                      //       label: 'New',
-                      //       value: _leadsNew,
-                      //       color: kPrimary,
-                      //     ),
-                      //     _StatChip(
-                      //       label: 'Follow-up',
-                      //       value: _leadsFollowUp,
-                      //       color: kWarning,
-                      //     ),
-                      //     _StatChip(
-                      //       label: 'Converted',
-                      //       value: _leadsConverted,
-                      //       color: kSuccess,
-                      //     ),
-                      //   ],
-                      //   // onTap: () => _navigate(const LeadListPage()),
-                      // ),
-
-                      // const SizedBox(height: 24),
                       const Text(
                         'Quick Actions',
                         style: TextStyle(
@@ -262,7 +319,7 @@ class _HomePageState extends State<HomePage>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: const LinearGradient(
-                colors: [kPrimary, kPrimaryLight],
+                colors: [Color(0xFF0D2A18), Color(0xFF1A3D28)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -295,7 +352,6 @@ class _HomePageState extends State<HomePage>
             ),
           ),
           const SizedBox(width: 12),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -320,8 +376,6 @@ class _HomePageState extends State<HomePage>
               ],
             ),
           ),
-
-          /// 🔴 Logout Button
           IconButton(
             onPressed: _handleLogout,
             icon: const Icon(Icons.logout),
@@ -335,15 +389,8 @@ class _HomePageState extends State<HomePage>
 
   void _handleLogout() async {
     final controller = context.read<LogoutController>();
-
     final success = await controller.logout();
-
     if (success) {
-      // 👉 Clear local data (VERY IMPORTANT)
-      // final prefs = await SharedPreferences.getInstance();
-      // await prefs.clear();
-
-      // 👉 Navigate to login
       Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
     } else {
       ScaffoldMessenger.of(
@@ -352,24 +399,15 @@ class _HomePageState extends State<HomePage>
     }
   }
 
-  // ─── Check-In Banner ────────────────────────────────────────────────────
-  Widget _buildCheckInBanner() {
+  Widget _buildCheckInBanner(bool isApiLoading) {
     final isCheckedIn = _checkInStatus == CheckInStatus.checkedIn;
     final isCheckedOut = _checkInStatus == CheckInStatus.checkedOut;
-    final isNotCheckedIn = _checkInStatus == CheckInStatus.notCheckedIn;
 
-    // Gradient colours per state
-    final List<Color> gradientColors = isCheckedOut
-        ? [const Color(0xFF374151), const Color(0xFF4B5563)] // slate/dark
-        : isCheckedIn
-            ? [const Color(0xFF16A34A), const Color(0xFF22C55E)] // green
-            : [kPrimary, kPrimaryLight]; // brand
+    final List<Color> gradientColors = isCheckedIn
+        ? [const Color(0xFF16A34A), const Color(0xFF22C55E)]
+        : [const Color(0xFF0D2A18), const Color(0xFF1A3D28)];
 
-    final Color shadowColor = isCheckedOut
-        ? const Color(0xFF374151)
-        : isCheckedIn
-            ? kSuccess
-            : kPrimary;
+    final Color shadowColor = isCheckedIn ? kSuccess : const Color(0xFF0D2A18);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 400),
@@ -390,301 +428,130 @@ class _HomePageState extends State<HomePage>
           ),
         ],
       ),
-      child: isCheckedOut
-          // ── Checked-Out summary row ──────────────────────────────────
-          ? Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.18),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(
-                    Icons.check_circle_outline_rounded,
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.18),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: isCheckedIn
+                ? const Icon(
+                    Icons.check_circle_rounded,
                     color: Colors.white,
                     size: 24,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Day Complete',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'In: $_checkInTime  ·  Out: $_checkOutTime',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.85),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 7,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.4),
-                    ),
-                  ),
-                  child: const Text(
-                    '✓ Done',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            )
-          // ── Not-checked-in / Checked-in row ─────────────────────────
-          : Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.18),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: isCheckedIn
-                      ? const Icon(
-                          Icons.location_on_rounded,
-                          color: Colors.white,
-                          size: 24,
-                        )
-                      : ScaleTransition(
-                          scale: _pulseAnimation,
-                          child: const Icon(
-                            Icons.location_off_rounded,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isCheckedIn
-                            ? 'Checked In at $_checkInTime'
-                            : 'Not Checked In',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        isCheckedIn
-                            ? 'GPS location recorded ✓'
-                            : 'Tap to record attendance',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.85),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (isNotCheckedIn)
-                  GestureDetector(
-                    onTap: _checkingIn ? null : _handleCheckIn,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: _checkingIn
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                color: kPrimary,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Text(
-                              'Check In',
-                              style: TextStyle(
-                                color: kPrimary,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                    ),
                   )
-                else
-                  // ── Check-Out button (shown while checked in) ────────
-                  GestureDetector(
-                    onTap: _checkingOut ? null : _handleCheckOut,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: _checkingOut
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                color: Color(0xFFDC2626),
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Text(
-                              'Check Out',
-                              style: TextStyle(
-                                color: Color(0xFFDC2626),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
+                : ScaleTransition(
+                    scale: _pulseAnimation,
+                    child: const Icon(
+                      Icons.check_circle_outline_rounded,
+                      color: Colors.white,
+                      size: 24,
                     ),
                   ),
-              ],
-            ),
-    );
-  }
-
-  // ─── Summary Card ────────────────────────────────────────────────────────
-  Widget _buildSummaryCard({
-    required String title,
-    required int total,
-    required String totalLabel,
-    required IconData icon,
-    required Color iconColor,
-    required Color iconBg,
-    required List<_StatChip> stats,
-    VoidCallback? onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: kCard,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: kBorder, width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.045),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: iconBg,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: iconColor, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Column(
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  isCheckedIn
+                      ? 'Checked In at $_checkInTime'
+                      : isCheckedOut
+                      ? 'Checked Out at $_checkOutTime'
+                      : 'Not Checked In',
                   style: const TextStyle(
-                    color: kText,
+                    color: Colors.white,
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '$total $totalLabel',
-                  style: const TextStyle(
-                    color: kSubtext,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
+                  isCheckedIn
+                      ? 'Tap to check out '
+                      : isCheckedOut
+                      ? 'Tap to check in again'
+                      : 'Tap to record attendance',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.85),
+                    fontSize: 12,
                   ),
                 ),
               ],
             ),
-            const SizedBox(width: 12),
-            Container(width: 1, height: 36, color: kBorder),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: stats
-                    .map((s) => _buildStatPill(s.label, s.value, s.color))
-                    .toList(),
+          ),
+          // ── Check In button (shown when not checked in OR after checkout) ──
+          if (!isCheckedIn)
+            GestureDetector(
+              onTap: isApiLoading ? null : _handleCheckIn,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: isApiLoading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          color: Color(0xFF0D2A18),
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Check In',
+                        style: TextStyle(
+                          color: Color(0xFF0D2A18),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+              ),
+            )
+          else
+            // ── Check Out button ──────────────────────────────────────────
+            GestureDetector(
+              onTap: isApiLoading ? null : _handleCheckOut,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: isApiLoading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          color: Color(0xFFDC2626),
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Check Out',
+                        style: TextStyle(
+                          color: Color(0xFFDC2626),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
               ),
             ),
-            const SizedBox(width: 8),
-            Icon(Icons.chevron_right_rounded, color: kSubtext, size: 18),
-          ],
-        ),
+        ],
       ),
-    );
-  }
-
-  Widget _buildStatPill(String label, int value, Color color) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            '$value',
-            style: TextStyle(
-              color: color,
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            color: kSubtext,
-            fontSize: 9.5,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
     );
   }
 
@@ -823,17 +690,5 @@ class _QuickActionData {
     required this.color,
     required this.bgColor,
     this.onTap,
-  });
-}
-
-class _StatChip {
-  final String label;
-  final int value;
-  final Color color;
-
-  const _StatChip({
-    required this.label,
-    required this.value,
-    required this.color,
   });
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:velvaere_app/controller/check_in/get_controller.dart';
+import 'package:velvaere_app/controller/check_in/post_controller.dart';
 import 'package:velvaere_app/controller/create_lead_controller.dart';
 import 'package:velvaere_app/controller/get_items_controller.dart';
 import 'package:velvaere_app/controller/get_lead_controller.dart';
@@ -25,6 +27,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CreateLeadController()),
         ChangeNotifierProvider(create: (_) => QuotationController()),
         ChangeNotifierProvider(create: (_) => GetItemsController()),
+        ChangeNotifierProvider(create: (_) => CheckinController()), // GET
+        ChangeNotifierProvider(create: (_) => EmployeeCheckinController()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
