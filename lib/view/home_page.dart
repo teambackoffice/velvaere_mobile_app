@@ -12,10 +12,10 @@ import 'package:velvaere_app/view/lead/lead_list.dart';
 import 'package:velvaere_app/view/quotation/create_quotation.dart';
 import 'package:velvaere_app/view/quotation/quotation_list.dart';
 
-// ─── Data Models ─────────────────────────────────────────────────────────
+// ─── Data Models ──────────────────────────────────────
 enum CheckInStatus { notCheckedIn, checkedIn, checkedOut }
 
-// ─── HomePage Widget ──────────────────────────────────────────────────────
+// ─── HomePage Widget ──────────────────────────────────
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
