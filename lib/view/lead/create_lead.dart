@@ -327,7 +327,7 @@ class _CreateLeadPageState extends State<CreateLeadPage> {
       child: ElevatedButton(
         onPressed: isLoading ? null : () => _submit(controller),
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF10B981),
+          backgroundColor: Color(0xFF426E4B),
           foregroundColor: Colors.white,
           disabledBackgroundColor: const Color(0xFF10B981).withOpacity(0.6),
           shape: RoundedRectangleBorder(
