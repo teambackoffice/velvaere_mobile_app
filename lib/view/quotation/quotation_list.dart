@@ -63,7 +63,7 @@ class _QuotationListPageState extends State<QuotationListPage> {
           context,
           MaterialPageRoute(builder: (_) => const CreateQuotationPage()),
         ),
-        backgroundColor: kPrimary,
+        backgroundColor: Color(0xFF426E4B),
         label: const Text(
           'New',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -132,9 +132,7 @@ class _QuotationListPageState extends State<QuotationListPage> {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => QuotationDetailPage(quotation: q),
-        ),
+        MaterialPageRoute(builder: (_) => QuotationDetailPage(quotation: q)),
       ),
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -158,7 +156,10 @@ class _QuotationListPageState extends State<QuotationListPage> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(6),

@@ -121,49 +121,14 @@ class _LoginPageState extends State<LoginPage>
                       Center(
                         child: Column(
                           children: [
-                            Container(
-                              width: 72,
-                              height: 72,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xFF8B5CF6),
-                                    Color(0xFFA855F7),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(
-                                      0xFF7C3AED,
-                                    ).withOpacity(0.4),
-                                    blurRadius: 24,
-                                    spreadRadius: 2,
-                                  ),
-                                ],
-                              ),
-                              child: ClipOval(
-                                child: Image.asset(
-                                  'assets/logo.jpg',
-                                  width: 72,
-                                  height: 72,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
                             const SizedBox(height: 18),
-                            const Text(
-                              'Velvaere',
-                              style: TextStyle(
-                                color: Color(0xFF1A1A2E), // ← dark
-                                fontSize: 32,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 1.2,
-                              ),
+                            Image.asset(
+                              'assets/logo.png',
+                              width: 200,
+                              height: 200,
+                              fit: BoxFit.contain,
                             ),
-                            const SizedBox(height: 6),
+
                             Text(
                               'Sign in to your account',
                               style: TextStyle(
@@ -381,7 +346,10 @@ class _LoginPageState extends State<LoginPage>
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFF8B5CF6), width: 1.5),
+          borderSide: const BorderSide(
+            color: const Color(0xFF426E4B),
+            width: 1.5,
+          ),
         ),
       ),
     );

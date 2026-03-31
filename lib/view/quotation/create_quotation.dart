@@ -258,7 +258,7 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
                                         height: 14,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
-                                          color: kPrimary,
+                                          color: Color(0xFF426E4B),
                                         ),
                                       ),
                                     )
@@ -282,14 +282,14 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
                                   children: [
                                     Icon(
                                       Icons.add_rounded,
-                                      color: kPrimary,
+                                      color: Color(0xFF426E4B),
                                       size: 16,
                                     ),
                                     SizedBox(width: 4),
                                     Text(
                                       'Add Item',
                                       style: TextStyle(
-                                        color: kPrimary,
+                                        color: Color(0xFF426E4B),
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -444,7 +444,7 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
                   width: 22,
                   height: 22,
                   decoration: BoxDecoration(
-                    color: kPrimary,
+                    color: const Color(0xFF426E4B),
                     borderRadius: BorderRadius.circular(7),
                   ),
                   alignment: Alignment.center,
@@ -462,7 +462,7 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
                   child: Text(
                     'Item',
                     style: TextStyle(
-                      color: kPrimary,
+                      color: Color(0xFF426E4B),
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -834,15 +834,15 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
           const Text(
             'Subtotal',
             style: TextStyle(
-              color: kPrimary,
+              color: Color(0xFF426E4B),
               fontSize: 14,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w800,
             ),
           ),
           Text(
             '₹${_subtotal.toStringAsFixed(2)}',
             style: const TextStyle(
-              color: kPrimary,
+              color: Color(0xFF426E4B),
               fontSize: 16,
               fontWeight: FontWeight.w800,
             ),
@@ -859,9 +859,9 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
       child: ElevatedButton(
         onPressed: _submitting ? null : _submit,
         style: ElevatedButton.styleFrom(
-          backgroundColor: kPrimary,
+          backgroundColor: const Color(0xFF426E4B),
           foregroundColor: Colors.white,
-          disabledBackgroundColor: kPrimary.withOpacity(0.6),
+          disabledBackgroundColor: const Color(0xFF426E4B).withOpacity(0.6),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
@@ -1423,7 +1423,10 @@ class _SheetHeader extends StatelessWidget {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: kPrimary, width: 1.5),
+                  borderSide: const BorderSide(
+                    color: const Color(0xFF426E4B),
+                    width: 1.5,
+                  ),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 12,

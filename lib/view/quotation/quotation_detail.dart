@@ -40,8 +40,18 @@ class QuotationDetailPage extends StatelessWidget {
 
   String _formatDate(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
@@ -118,11 +128,15 @@ class QuotationDetailPage extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: kBorder),
           ),
-          child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: kText),
+          child: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            size: 16,
+            color: kText,
+          ),
         ),
       ),
       flexibleSpace: FlexibleSpaceBar(
-        titlePadding: const EdgeInsets.only(left: 56, bottom: 14, right: 16),
+        titlePadding: const EdgeInsets.only(left: 40, bottom: 14, right: 16),
         title: Text(
           quotation.name,
           style: const TextStyle(
@@ -153,11 +167,8 @@ class QuotationDetailPage extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [kPrimary, kPrimaryLight],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Color(0xFF426E4B),
+
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
@@ -197,7 +208,10 @@ class QuotationDetailPage extends StatelessWidget {
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20),
@@ -229,7 +243,11 @@ class QuotationDetailPage extends StatelessWidget {
           const SizedBox(height: 14),
           Row(
             children: [
-              const Icon(Icons.person_outline_rounded, color: Colors.white70, size: 14),
+              const Icon(
+                Icons.person_outline_rounded,
+                color: Colors.white70,
+                size: 14,
+              ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
@@ -243,14 +261,15 @@ class QuotationDetailPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 16),
-              const Icon(Icons.calendar_today_rounded, color: Colors.white70, size: 14),
+              const Icon(
+                Icons.calendar_today_rounded,
+                color: Colors.white70,
+                size: 14,
+              ),
               const SizedBox(width: 6),
               Text(
                 _formatDate(quotation.transactionDate),
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                ),
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
               ),
             ],
           ),
@@ -312,7 +331,11 @@ class QuotationDetailPage extends StatelessWidget {
               color: kPrimaryBg,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.currency_rupee_rounded, color: kPrimary, size: 20),
+            child: const Icon(
+              Icons.currency_rupee_rounded,
+              color: kPrimary,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -356,7 +379,11 @@ class QuotationDetailPage extends StatelessWidget {
               color: statusColor.withOpacity(0.12),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(_getStatusIcon(quotation.status), color: statusColor, size: 20),
+            child: Icon(
+              _getStatusIcon(quotation.status),
+              color: statusColor,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 14),
           Column(
@@ -459,7 +486,11 @@ class _InfoRow extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(color: kBorder),
                 ),
-                child: const Icon(Icons.copy_rounded, size: 14, color: kSubtext),
+                child: const Icon(
+                  Icons.copy_rounded,
+                  size: 14,
+                  color: kSubtext,
+                ),
               ),
             ),
         ],

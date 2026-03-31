@@ -5,6 +5,7 @@ import 'package:velvaere_app/controller/get_lead_controller.dart';
 import 'package:velvaere_app/modal/get_lead_modal.dart';
 import 'package:velvaere_app/theme/app_colors.dart';
 import 'package:velvaere_app/view/lead/create_lead.dart';
+import 'package:velvaere_app/view/lead/lead_detail.dart';
 
 class LeadListPage extends StatefulWidget {
   const LeadListPage({super.key});
@@ -104,7 +105,7 @@ class _LeadListPageState extends State<LeadListPage> {
               MaterialPageRoute(builder: (_) => const CreateLeadPage()),
             );
           },
-          backgroundColor: const Color(0xFF10B981),
+          backgroundColor: Color(0xFF426E4B),
           foregroundColor: Colors.white,
           elevation: 4,
           icon: const Icon(Icons.person_add_rounded),
@@ -258,8 +259,8 @@ class _LeadListPageState extends State<LeadListPage> {
           children: _filters.map((f) {
             final isSelected = _selectedFilter == f;
             final color = f == 'All'
-                ? const Color(0xFF10B981)
-                : _statusColors[f] ?? kPrimary;
+                ? const Color(0xFF426E4B)
+                : _statusColors[f] ?? const Color(0xFF426E4B);
             final count = f == 'All'
                 ? all.length
                 : all.where((l) => l.status == f).length;
@@ -329,7 +330,13 @@ class _LeadListPageState extends State<LeadListPage> {
     final sourceIcon = _sourceIcons[l.source] ?? Icons.track_changes_rounded;
 
     return GestureDetector(
-      onTap: () => HapticFeedback.selectionClick(),
+      onTap: () {
+        HapticFeedback.selectionClick();
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => LeadDetailPage(lead: l)),
+        );
+      },
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -359,7 +366,7 @@ class _LeadListPageState extends State<LeadListPage> {
                     child: Text(
                       l.leadName.isNotEmpty ? l.leadName[0].toUpperCase() : '?',
                       style: const TextStyle(
-                        color: Color(0xFF10B981),
+                        color: Color(0xFF426E4B),
                         fontWeight: FontWeight.w800,
                         fontSize: 16,
                       ),
