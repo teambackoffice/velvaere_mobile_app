@@ -376,11 +376,39 @@ class _HomePageState extends State<HomePage>
               ],
             ),
           ),
-          IconButton(
-            onPressed: _handleLogout,
-            icon: const Icon(Icons.logout),
-            color: kPrimary,
-            tooltip: 'Logout',
+          GestureDetector(
+            onTap: _handleLogout,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF426E4B).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: const Color(0xFF426E4B).withOpacity(0.4),
+                  width: 1,
+                ),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.logout_rounded,
+                    color: Color(0xFF426E4B),
+                    size: 14,
+                  ),
+                  SizedBox(width: 5),
+                  Text(
+                    'Logout',
+                    style: TextStyle(
+                      color: Color(0xFF426E4B),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -388,15 +416,150 @@ class _HomePageState extends State<HomePage>
   }
 
   void _handleLogout() async {
-    final controller = context.read<LogoutController>();
-    final success = await controller.logout();
-    if (success) {
-      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
-    } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Logout failed')));
-    }
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        bool isLoading = false;
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            contentPadding: EdgeInsets.zero,
+            titlePadding: EdgeInsets.zero,
+            content: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color:
+                                      const Color(0xFF426E4B).withOpacity(0.1),
+                                ),
+                                child: const Icon(
+                                  Icons.logout_rounded,
+                                  color: Color(0xFF426E4B),
+                                  size: 18,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              const Text(
+                                'Confirm Logout',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF1A2E22),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          Text(
+                            'Are you sure you want to log out?',
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              color: Colors.grey.shade600,
+                              height: 1.4,
+                            ),
+                          ),
+                          const SizedBox(height: 22),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => Navigator.of(ctx).pop(),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.grey.shade700,
+                                    side: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Cancel',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF426E4B),
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                  onPressed: () async {
+                                    setDialogState(() => isLoading = true);
+                                    final controller =
+                                        context.read<LogoutController>();
+                                    final success = await controller.logout();
+                                    if (!ctx.mounted) return;
+                                    Navigator.of(ctx).pop();
+                                    if (success) {
+                                      Navigator.pushNamedAndRemoveUntil(
+                                        context,
+                                        '/login',
+                                        (route) => false,
+                                      );
+                                    } else {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Logout failed'),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  child: isLoading
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2.5,
+                                          ),
+                                        )
+                                      : const Text(
+                                          'Logout',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildCheckInBanner(bool isApiLoading) {
