@@ -461,38 +461,6 @@ class _InfoRow extends StatelessWidget {
               ],
             ),
           ),
-          if (canCopy)
-            GestureDetector(
-              onTap: () {
-                Clipboard.setData(ClipboardData(text: value));
-                if (context != null) {
-                  ScaffoldMessenger.of(context!).showSnackBar(
-                    SnackBar(
-                      content: const Text('Copied to clipboard'),
-                      backgroundColor: kPrimary,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                }
-              },
-              child: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: kSurface,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: kBorder),
-                ),
-                child: const Icon(
-                  Icons.copy_rounded,
-                  size: 14,
-                  color: kSubtext,
-                ),
-              ),
-            ),
         ],
       ),
     );

@@ -209,7 +209,7 @@ class _LeadListPageState extends State<LeadListPage> {
         onChanged: (v) => setState(() => _searchQuery = v),
         style: const TextStyle(color: kText, fontSize: 14),
         decoration: InputDecoration(
-          hintText: 'Search by name or ID…',
+          hintText: 'Search by name...',
           hintStyle: const TextStyle(color: kSubtext, fontSize: 13),
           prefixIcon: const Icon(
             Icons.search_rounded,
