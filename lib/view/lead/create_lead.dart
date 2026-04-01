@@ -127,14 +127,19 @@ class _CreateLeadPageState extends State<CreateLeadPage> {
                               _buildTextField(
                                 controller: _phoneController,
                                 label: 'Phone',
-                                hint: '+91 98765 43210',
+                                hint: '98765 43210',
                                 icon: Icons.phone_rounded,
                                 keyboardType: TextInputType.phone,
+                                prefixText: '+91 ',
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  LengthLimitingTextInputFormatter(10),
+                                ],
                                 validator: (v) {
                                   if (v == null || v.trim().isEmpty)
                                     return null;
-                                  if (v.trim().length < 7)
-                                    return 'Invalid phone';
+                                  if (v.trim().length != 10)
+                                    return 'Enter a valid 10-digit phone number';
                                   return null;
                                 },
                               ),
@@ -243,17 +248,22 @@ class _CreateLeadPageState extends State<CreateLeadPage> {
     int maxLines = 1,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
+    String? prefixText,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
       keyboardType: keyboardType,
       validator: validator,
+      inputFormatters: inputFormatters,
       style: const TextStyle(color: kText, fontSize: 14),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
         prefixIcon: Icon(icon, color: kSubtext, size: 18),
+        prefixText: prefixText,
+        prefixStyle: const TextStyle(color: kText, fontSize: 14),
         labelStyle: const TextStyle(color: kSubtext, fontSize: 13),
         hintStyle: const TextStyle(color: kBorder, fontSize: 13),
         filled: true,
