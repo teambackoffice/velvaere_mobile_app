@@ -90,6 +90,17 @@ class _LeadDetailPageState extends State<LeadDetailPage> {
   Color _statusBgColor(String status) =>
       _statusBgColors[status] ?? const Color(0xFFD1FAE5);
 
+  String _stripHtml(String html) {
+    return html
+        .replaceAll(RegExp(r'<[^>]*>'), '')
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .trim();
+  }
+
   void _addNote() {
     final text = _noteController.text.trim();
     if (text.isEmpty) return;
@@ -208,6 +219,9 @@ class _LeadDetailPageState extends State<LeadDetailPage> {
                     const SizedBox(height: 10),
                     _buildStatusCard(lead, statusColor),
                     const SizedBox(height: 20),
+                    _buildSectionTitle('Notes'),
+                    const SizedBox(height: 10),
+                    _buildDescriptionCard(lead),
                     // _buildNotesSection(),
                   ],
                 ),
@@ -469,224 +483,43 @@ class _LeadDetailPageState extends State<LeadDetailPage> {
     );
   }
 
-  Widget _buildNotesSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildSectionTitle('Notes'),
-            GestureDetector(
-              onTap: () {
-                HapticFeedback.selectionClick();
-                setState(() => _showNoteInput = !_showNoteInput);
-                if (!_showNoteInput) {
-                  Future.delayed(const Duration(milliseconds: 50), () {
-                    _noteFocusNode.requestFocus();
-                  });
-                }
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD1FAE5),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _showNoteInput ? Icons.close_rounded : Icons.add_rounded,
-                      color: const Color(0xFF426E4B),
-                      size: 14,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _showNoteInput ? 'Cancel' : 'Add Note',
-                      style: const TextStyle(
-                        color: Color(0xFF426E4B),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        // Note input area
-        AnimatedSize(
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeInOut,
-          child: _showNoteInput
-              ? Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: kCard,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: const Color(0xFF426E4B).withOpacity(0.4),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      TextField(
-                        controller: _noteController,
-                        focusNode: _noteFocusNode,
-                        maxLines: 4,
-                        minLines: 2,
-                        style: const TextStyle(color: kText, fontSize: 14),
-                        decoration: const InputDecoration(
-                          hintText: 'Write a note about this lead…',
-                          hintStyle: TextStyle(color: kSubtext, fontSize: 13),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      GestureDetector(
-                        onTap: _addNote,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 9,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF426E4B),
-                            borderRadius: BorderRadius.circular(9),
-                          ),
-                          child: const Text(
-                            'Save Note',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : const SizedBox.shrink(),
-        ),
-        // Notes list or empty
-        if (_notes.isEmpty && !_showNoteInput)
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 28),
-            decoration: BoxDecoration(
-              color: kCard,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: kBorder),
-            ),
-            child: Center(
-              child: Column(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFD1FAE5),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.sticky_note_2_rounded,
-                      color: Color(0xFF426E4B),
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'No notes yet',
-                    style: TextStyle(
-                      color: kText,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Tap "Add Note" to jot something down',
-                    style: TextStyle(color: kSubtext, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          )
-        else
-          ...List.generate(_notes.length, (i) => _buildNoteCard(i)),
-      ],
-    );
-  }
-
-  Widget _buildNoteCard(int index) {
-    final note = _notes[index];
+  Widget _buildDescriptionCard(Message lead) {
+    final raw = _stripHtml(lead.note ?? '');
+    final isEmpty = raw.isEmpty;
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: kCard,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: kBorder),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD1FAE5),
-                  borderRadius: BorderRadius.circular(7),
-                ),
-                child: const Icon(
-                  Icons.sticky_note_2_rounded,
-                  color: Color(0xFF426E4B),
-                  size: 14,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                _formatDateTime(note.createdAt),
-                style: const TextStyle(color: kSubtext, fontSize: 11),
-              ),
-              const Spacer(),
-              GestureDetector(
-                onTap: () => _deleteNote(index),
-                child: Container(
-                  padding: const EdgeInsets.all(5),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEE2E2),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Icon(
-                    Icons.delete_outline_rounded,
-                    size: 14,
-                    color: kError,
-                  ),
-                ),
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEEF3FF),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.description_rounded,
+              color: kPrimary,
+              size: 16,
+            ),
           ),
-          const SizedBox(height: 10),
-          Text(
-            note.text,
-            style: const TextStyle(color: kText, fontSize: 14, height: 1.5),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              isEmpty ? 'No notes added' : raw,
+              style: TextStyle(
+                color: isEmpty ? kSubtext : kText,
+                fontSize: 14,
+                height: 1.6,
+                fontStyle: isEmpty ? FontStyle.italic : FontStyle.normal,
+              ),
+            ),
           ),
         ],
       ),

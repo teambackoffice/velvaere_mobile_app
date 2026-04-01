@@ -37,6 +37,7 @@ class Message {
   DateTime creation;
   DateTime modified;
   String leadOwner;
+  String? note;
 
   Message({
     required this.name,
@@ -48,6 +49,7 @@ class Message {
     required this.creation,
     required this.modified,
     required this.leadOwner,
+    this.note,
   });
 
   factory Message.fromJson(Map<String, dynamic> json) => Message(
@@ -60,6 +62,7 @@ class Message {
     creation: DateTime.parse(json["creation"]),
     modified: DateTime.parse(json["modified"]),
     leadOwner: json["lead_owner"],
+    note: json["notes_html"] ?? "",
   );
 
   Map<String, dynamic> toJson() => {
@@ -72,5 +75,6 @@ class Message {
     "creation": creation.toIso8601String(),
     "modified": modified.toIso8601String(),
     "lead_owner": leadOwner,
+    "notes_html": note,
   };
 }
