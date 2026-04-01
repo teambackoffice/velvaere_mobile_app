@@ -326,8 +326,8 @@ class _HomePageState extends State<HomePage>
       child: Row(
         children: [
           Container(
-            width: 46,
-            height: 46,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: const LinearGradient(
@@ -356,7 +356,7 @@ class _HomePageState extends State<HomePage>
                     : '?',
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 15,
+                  fontSize: 13,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,
                 ),
@@ -372,7 +372,7 @@ class _HomePageState extends State<HomePage>
                   '$_greeting, $_salesPersonName 👋',
                   style: const TextStyle(
                     color: kText,
-                    fontSize: 15,
+                    fontSize: 13,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -381,7 +381,7 @@ class _HomePageState extends State<HomePage>
                   _formattedDate,
                   style: const TextStyle(
                     color: kSubtext,
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
@@ -719,7 +719,6 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  // ─── Stats Row ─────────────────────────────────────────────────────────────
   Widget _buildStatsRow() {
     final countCtrl = context.watch<CountController>();
 
@@ -744,6 +743,7 @@ class _HomePageState extends State<HomePage>
                 iconColor: const Color(0xFF7C3AED),
                 iconBg: const Color(0xFFF3EEFF),
                 countColor: const Color(0xFF7C3AED),
+                onTap: () => _navigate(const QuotationListPage()),
               ),
             ),
             const SizedBox(width: 12),
@@ -756,6 +756,7 @@ class _HomePageState extends State<HomePage>
                 iconColor: const Color(0xFF10B981),
                 iconBg: const Color(0xFFD1FAE5),
                 countColor: const Color(0xFF10B981),
+                onTap: () => _navigate(const LeadListPage()),
               ),
             ),
           ],
@@ -772,8 +773,11 @@ class _HomePageState extends State<HomePage>
     required Color iconColor,
     required Color iconBg,
     required Color countColor,
+    VoidCallback? onTap,
   }) {
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: kCard,
@@ -835,7 +839,7 @@ class _HomePageState extends State<HomePage>
           ),
         ],
       ),
-    );
+    ));
   }
 
   // ─── Quick Actions Grid ──────────────────────────────────────────────────

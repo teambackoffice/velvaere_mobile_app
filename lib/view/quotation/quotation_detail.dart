@@ -4,9 +4,12 @@ import 'package:velvaere_app/modal/get_quotation_modal.dart';
 import 'package:velvaere_app/theme/app_colors.dart';
 
 class QuotationDetailPage extends StatelessWidget {
-  final Quotation quotation;
+  final Message message;
 
-  const QuotationDetailPage({super.key, required this.quotation});
+  const QuotationDetailPage({super.key, required this.message});
+
+  Quotation get quotation => message.quotation;
+  List<Item> get items => message.items;
 
   Color _getStatusColor(String status) {
     switch (status) {
@@ -98,6 +101,12 @@ class QuotationDetailPage extends StatelessWidget {
                   _buildSectionTitle('Financial Summary'),
                   const SizedBox(height: 10),
                   _buildAmountCard(),
+                  if (items.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    _buildSectionTitle('Items (${items.length})'),
+                    const SizedBox(height: 10),
+                    _buildItemsCard(),
+                  ],
                   const SizedBox(height: 16),
                   _buildSectionTitle('Status'),
                   const SizedBox(height: 10),
@@ -273,6 +282,27 @@ class QuotationDetailPage extends StatelessWidget {
               ),
             ],
           ),
+          if (items.isNotEmpty) ...[  
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.shopping_bag_outlined, color: Colors.white70, size: 12),
+                  const SizedBox(width: 5),
+                  Text(
+                    '${items.length} ${items.length == 1 ? 'item' : 'items'}',
+                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -403,6 +433,149 @@ class QuotationDetailPage extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItemsCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: kCard,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: kBorder),
+      ),
+      child: Column(
+        children: items.asMap().entries.map((entry) {
+          final i = entry.key;
+          final item = entry.value;
+          final isLast = i == items.length - 1;
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: kPrimaryBg,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${i + 1}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: kPrimary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.itemName,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: kText,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            item.itemCode,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: kSubtext,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              _ItemChip(
+                                label: '${item.qty % 1 == 0 ? item.qty.toInt() : item.qty} ${item.uom}',
+                                icon: Icons.inventory_2_outlined,
+                              ),
+                              const SizedBox(width: 6),
+                              _ItemChip(
+                                label: _formatCurrency(item.rate) + '/unit',
+                                icon: Icons.currency_rupee_rounded,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          _formatCurrency(item.amount),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: kText,
+                          ),
+                        ),
+                        if (item.discountPercentage > 0)
+                          Text(
+                            '${item.discountPercentage.toStringAsFixed(0)}% off',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: kSuccess,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (!isLast)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Divider(height: 1, color: kBorder),
+                ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class _ItemChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+
+  const _ItemChip({required this.label, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: kSurface,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: kBorder, width: 0.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 10, color: kSubtext),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 10, color: kSubtext, fontWeight: FontWeight.w500),
           ),
         ],
       ),
