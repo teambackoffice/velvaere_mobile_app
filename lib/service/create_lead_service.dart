@@ -36,23 +36,10 @@ class CreateLeadService {
       request.body = json.encode({"lead_data": leadData});
 
       // 🔍 Debug Logs
-      if (kDebugMode) {
-        print("========== CREATE LEAD REQUEST ==========");
-        print("Token: $token");
-        print("Body: ${request.body}");
-        print("Cookie: ${request.headers['Cookie']}");
-        print("Auth: ${request.headers['Authorization']}");
-      }
 
       http.StreamedResponse response = await request.send();
 
       final responseBody = await response.stream.bytesToString();
-
-      if (kDebugMode) {
-        print("========== CREATE LEAD RESPONSE ==========");
-        print("Status Code: ${response.statusCode}");
-        print("Response: $responseBody");
-      }
 
       if (response.statusCode == 200) {
         return json.decode(responseBody);
@@ -65,10 +52,6 @@ class CreateLeadService {
         };
       }
     } catch (e) {
-      if (kDebugMode) {
-        print("❌ ERROR: $e");
-      }
-
       return {"success": false, "message": e.toString()};
     }
   }

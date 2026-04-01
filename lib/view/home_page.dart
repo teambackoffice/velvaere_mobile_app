@@ -5,6 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:velvaere_app/controller/check_in/get_controller.dart';
 import 'package:velvaere_app/controller/check_in/post_controller.dart';
+import 'package:velvaere_app/controller/count_controller.dart';
+import 'package:velvaere_app/controller/get_lead_controller.dart';
+import 'package:velvaere_app/controller/get_quotation_controller.dart';
 import 'package:velvaere_app/controller/logout_controller.dart';
 import 'package:velvaere_app/theme/app_colors.dart';
 import 'package:velvaere_app/view/lead/create_lead.dart';
@@ -46,9 +49,12 @@ class _HomePageState extends State<HomePage>
     );
     _loadUserName();
 
-    // Fetch today's checkins after first frame
+    // Fetch today's checkins, quotations and leads after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadTodayCheckins();
+      context.read<QuotationController>().fetchQuotationDetails();
+      context.read<LeadController>().fetchLeads();
+      context.read<CountController>().fetchTotalCounts();
     });
   }
 
@@ -130,12 +136,16 @@ class _HomePageState extends State<HomePage>
     super.dispose();
   }
 
-  void _navigate(Widget page) {
+  Future<void> _navigate(Widget page) async {
     HapticFeedback.selectionClick();
-    Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+    if (!mounted) return;
+    // Refresh counts when returning from any sub-page
+    context.read<CountController>().fetchTotalCounts();
+    context.read<QuotationController>().fetchQuotationDetails();
+    context.read<LeadController>().fetchLeads();
   }
 
-  // ─── Check In ────────────────────────────────────────────────────────────
   Future<void> _handleCheckIn() async {
     if (_checkInStatus == CheckInStatus.checkedIn) return;
     HapticFeedback.mediumImpact();
@@ -280,6 +290,8 @@ class _HomePageState extends State<HomePage>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildCheckInBanner(checkinCtrl.isLoading),
+                      const SizedBox(height: 16),
+                      _buildStatsRow(),
                       const SizedBox(height: 20),
                       const Text(
                         'Quick Actions',
@@ -430,131 +442,120 @@ class _HomePageState extends State<HomePage>
             titlePadding: EdgeInsets.zero,
             content: Padding(
               padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color:
-                                      const Color(0xFF426E4B).withOpacity(0.1),
-                                ),
-                                child: const Icon(
-                                  Icons.logout_rounded,
-                                  color: Color(0xFF426E4B),
-                                  size: 18,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              const Text(
-                                'Confirm Logout',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF1A2E22),
-                                ),
-                              ),
-                            ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color(0xFF426E4B).withOpacity(0.1),
+                        ),
+                        child: const Icon(
+                          Icons.logout_rounded,
+                          color: Color(0xFF426E4B),
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Confirm Logout',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1A2E22),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Are you sure you want to log out?',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      color: Colors.grey.shade600,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.grey.shade700,
+                            side: BorderSide(color: Colors.grey.shade300),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
-                          const SizedBox(height: 14),
-                          Text(
-                            'Are you sure you want to log out?',
+                          child: const Text(
+                            'Cancel',
                             style: TextStyle(
-                              fontSize: 13.5,
-                              color: Colors.grey.shade600,
-                              height: 1.4,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
                             ),
                           ),
-                          const SizedBox(height: 22),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: () => Navigator.of(ctx).pop(),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.grey.shade700,
-                                    side: BorderSide(
-                                      color: Colors.grey.shade300,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    'Cancel',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF426E4B),
-                                    foregroundColor: Colors.white,
-                                    elevation: 0,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
-                                    ),
-                                  ),
-                                  onPressed: () async {
-                                    setDialogState(() => isLoading = true);
-                                    final controller =
-                                        context.read<LogoutController>();
-                                    final success = await controller.logout();
-                                    if (!ctx.mounted) return;
-                                    Navigator.of(ctx).pop();
-                                    if (success) {
-                                      Navigator.pushNamedAndRemoveUntil(
-                                        context,
-                                        '/login',
-                                        (route) => false,
-                                      );
-                                    } else {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Logout failed'),
-                                        ),
-                                      );
-                                    }
-                                  },
-                                  child: isLoading
-                                      ? const SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: CircularProgressIndicator(
-                                            color: Colors.white,
-                                            strokeWidth: 2.5,
-                                          ),
-                                        )
-                                      : const Text(
-                                          'Logout',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                        ),
                       ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF426E4B),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          onPressed: () async {
+                            setDialogState(() => isLoading = true);
+                            final controller = context.read<LogoutController>();
+                            final success = await controller.logout();
+                            if (!ctx.mounted) return;
+                            Navigator.of(ctx).pop();
+                            if (success) {
+                              Navigator.pushNamedAndRemoveUntil(
+                                context,
+                                '/login',
+                                (route) => false,
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Logout failed')),
+                              );
+                            }
+                          },
+                          child: isLoading
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2.5,
+                                  ),
+                                )
+                              : const Text(
+                                  'Logout',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -713,6 +714,125 @@ class _HomePageState extends State<HomePage>
                       ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Stats Row ─────────────────────────────────────────────────────────────
+  Widget _buildStatsRow() {
+    final countCtrl = context.watch<CountController>();
+
+    final countData = countCtrl.countData;
+
+    final quotationCount = countData?.message.userCounts.quotationsCreated ?? 0;
+
+    final leadCount = countData?.message.userCounts.leadsCreated ?? 0;
+
+    final isLoading = countCtrl.isLoading;
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                label: 'Quotations',
+                count: quotationCount,
+                isLoading: isLoading,
+                icon: Icons.description_rounded,
+                iconColor: const Color(0xFF7C3AED),
+                iconBg: const Color(0xFFF3EEFF),
+                countColor: const Color(0xFF7C3AED),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                label: 'Leads',
+                count: leadCount,
+                isLoading: isLoading,
+                icon: Icons.people_alt_rounded,
+                iconColor: const Color(0xFF10B981),
+                iconBg: const Color(0xFFD1FAE5),
+                countColor: const Color(0xFF10B981),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCard({
+    required String label,
+    required int count,
+    required bool isLoading,
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBg,
+    required Color countColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: kCard,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: kBorder, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: iconBg,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: iconColor, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                isLoading
+                    ? Container(
+                        width: 32,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          color: kBorder,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      )
+                    : Text(
+                        '$count',
+                        style: TextStyle(
+                          color: countColor,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          height: 1,
+                        ),
+                      ),
+                const SizedBox(height: 3),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: kSubtext,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
