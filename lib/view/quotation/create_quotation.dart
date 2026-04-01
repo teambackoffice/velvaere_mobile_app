@@ -39,6 +39,9 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
   @override
   void dispose() {
     _createController.dispose();
+    for (final item in _items) {
+      item.rateController.dispose();
+    }
     super.dispose();
   }
 
@@ -149,8 +152,9 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
 
   void _removeItem(int index) {
     HapticFeedback.mediumImpact();
-    final removed = _items[index];
-    setState(() => _items.removeAt(index));
+    final removed = _items.removeAt(index);
+    removed.rateController.dispose();
+    setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -647,10 +651,7 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
                           ),
                           const SizedBox(height: 6),
                           TextFormField(
-                            key: ValueKey('rate_${index}_${item.rate}'),
-                            initialValue: item.rate > 0
-                                ? item.rate.toStringAsFixed(0)
-                                : '',
+                            controller: item.rateController,
                             onChanged: (v) => setState(
                               () => item.rate = double.tryParse(v) ?? 0,
                             ),
@@ -1697,4 +1698,6 @@ class _LineItem {
   double qty = 0;
   double rate = 0;
   double get total => qty * rate;
+
+  final TextEditingController rateController = TextEditingController();
 }
