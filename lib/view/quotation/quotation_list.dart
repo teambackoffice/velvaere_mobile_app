@@ -441,7 +441,7 @@ class _QuotationListPageState extends State<QuotationListPage> {
     );
   }
 
-  // ── FAB ───────────────────────────────────────────────────────────────────
+  // ── FAB ──────────────────────────────────────────
 
   Widget _buildFab() {
     return FloatingActionButton.extended(
@@ -484,33 +484,105 @@ class _QuotationListPageState extends State<QuotationListPage> {
   }
 
   Widget _buildErrorState(String error) {
+    final displayError = error.contains('502')
+        ? 'Server is temporarily unavailable.\nWe\'re working on it.'
+        : error;
+
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, color: kError, size: 40),
-            const SizedBox(height: 12),
-            Text(
-              error,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: kText, fontSize: 13),
-            ),
-            const SizedBox(height: 16),
-            OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: _kGreen),
-                foregroundColor: _kGreen,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 28),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1A2E).withOpacity(0.06),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: kError.withOpacity(0.15), width: 1.2),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icon container with soft glow
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: kError.withOpacity(0.08),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: kError.withOpacity(0.2),
+                    width: 1.5,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.wifi_off_rounded,
+                  color: kError,
+                  size: 32,
                 ),
               ),
-              onPressed: () =>
-                  context.read<QuotationController>().fetchQuotationDetails(),
-              child: const Text('Retry'),
-            ),
-          ],
+
+              const SizedBox(height: 20),
+
+              // Title
+              const Text(
+                'Something went wrong',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: kText,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.3,
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              // Subtitle / error message
+              Text(
+                displayError,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: kText.withOpacity(0.5),
+                  fontSize: 13,
+                  height: 1.5,
+                ),
+              ),
+
+              const SizedBox(height: 28),
+
+              // Retry button — full width, filled
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  style: TextButton.styleFrom(
+                    backgroundColor: _kGreen,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  onPressed: () => context
+                      .read<QuotationController>()
+                      .fetchQuotationDetails(),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.refresh_rounded, size: 18),
+                      SizedBox(width: 8),
+                      Text(
+                        'Try again',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
