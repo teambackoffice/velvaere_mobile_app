@@ -449,56 +449,108 @@ class _LeadListPageState extends State<LeadListPage> {
   }
 
   Widget _buildErrorState(LeadController controller) {
+    final errorString = controller.error ?? '';
+    final displayError = errorString.contains('502')
+        ? 'Server is temporarily unavailable.\nWe\'re working on it.'
+        : errorString;
+
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFEE2E2),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: const Icon(Icons.wifi_off_rounded, color: kError, size: 30),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 28),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1A2E).withOpacity(0.06),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: kError.withOpacity(0.15), width: 1.2),
           ),
-          const SizedBox(height: 16),
-          const Text(
-            'Failed to load leads',
-            style: TextStyle(
-              color: kText,
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            controller.error ?? '',
-            style: const TextStyle(color: kSubtext, fontSize: 12),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          GestureDetector(
-            onTap: () {
-              HapticFeedback.mediumImpact();
-              controller.fetchLeads();
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFF10B981),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Text(
-                'Retry',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icon container with soft glow
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: kError.withOpacity(0.08),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: kError.withOpacity(0.2),
+                    width: 1.5,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.wifi_off_rounded,
+                  color: kError,
+                  size: 32,
                 ),
               ),
-            ),
+
+              const SizedBox(height: 20),
+
+              // Title
+              const Text(
+                'Something went wrong',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: kText,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.3,
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              // Subtitle / error message
+              Text(
+                displayError,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: kText.withOpacity(0.5),
+                  fontSize: 13,
+                  height: 1.5,
+                ),
+              ),
+
+              const SizedBox(height: 28),
+
+              // Retry button — full width, filled
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  style: TextButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  onPressed: () {
+                    HapticFeedback.mediumImpact();
+                    controller.fetchLeads();
+                  },
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.refresh_rounded, size: 18),
+                      SizedBox(width: 8),
+                      Text(
+                        'Try again',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
