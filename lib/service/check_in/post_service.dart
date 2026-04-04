@@ -47,6 +47,11 @@ class EmployeeCheckinService {
 
       if (response.statusCode == 200) {
         return {'success': true, 'data': responseData};
+      } else if (response.statusCode == 502) {
+        return {
+          'success': false,
+          'message': 'Server error and will be solved shortly',
+        };
       } else {
         return {
           'success': false,
