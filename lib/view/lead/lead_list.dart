@@ -20,6 +20,7 @@ class _LeadListPageState extends State<LeadListPage> {
   String _searchQuery = '';
 
   static const _filters = ['All', 'New', 'Converted'];
+  static const _kGreen = Color(0xFF1A3D2B);
 
   static const Map<String, Color> _statusColors = {
     'New': kPrimary,
@@ -132,7 +133,7 @@ class _LeadListPageState extends State<LeadListPage> {
                             ),
                           )
                         : controller.error != null
-                        ? _buildErrorState(controller)
+                        ? _buildErrorState(controller.error!)
                         : filtered.isEmpty
                         ? _buildEmptyState()
                         : ListView.separated(
@@ -448,11 +449,10 @@ class _LeadListPageState extends State<LeadListPage> {
     );
   }
 
-  Widget _buildErrorState(LeadController controller) {
-    final errorString = controller.error ?? '';
-    final displayError = errorString.contains('502')
+  Widget _buildErrorState(String error) {
+    final displayError = error.contains('502')
         ? 'Server is temporarily unavailable.\nWe\'re working on it.'
-        : errorString;
+        : error;
 
     return Center(
       child: Padding(
@@ -504,7 +504,7 @@ class _LeadListPageState extends State<LeadListPage> {
 
               // Subtitle / error message
               Text(
-                displayError,
+                'Server is temporarily unavailable.\nWe\'re working on it',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: kText.withOpacity(0.5),
@@ -520,17 +520,14 @@ class _LeadListPageState extends State<LeadListPage> {
                 width: double.infinity,
                 child: TextButton(
                   style: TextButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
+                    backgroundColor: _kGreen,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  onPressed: () {
-                    HapticFeedback.mediumImpact();
-                    controller.fetchLeads();
-                  },
+                  onPressed: () => context.read<LeadController>().fetchLeads(),
                   child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
