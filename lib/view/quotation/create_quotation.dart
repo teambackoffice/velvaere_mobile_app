@@ -194,6 +194,13 @@ class _CreateQuotationPageState extends State<CreateQuotationPage> {
             _items[index].itemCode = msg.itemCode;
             _items[index].uom = msg.uom;
             _items[index].rate = msg.priceListRate.toDouble();
+            
+            if (_items[index].rate > 0) {
+              _items[index].rateController.text = _items[index].rate.toStringAsFixed(2);
+            } else {
+              _items[index].rateController.clear();
+            }
+
             if (_items[index].qty == 0) _items[index].qty = 1;
           });
         },

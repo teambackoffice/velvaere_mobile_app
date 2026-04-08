@@ -19,18 +19,18 @@ class _LeadListPageState extends State<LeadListPage> {
   String _selectedFilter = 'All';
   String _searchQuery = '';
 
-  static const _filters = ['All', 'New', 'Converted'];
+  static const _filters = ['All', 'Quotation', 'Converted'];
   static const _kGreen = Color(0xFF1A3D2B);
 
   static const Map<String, Color> _statusColors = {
-    'New': kPrimary,
-    'Follow-up': kWarning,
-    'Converted': kSuccess,
-    'Lost': kError,
+    'Quotation': _kGreen,
+    'Follow-up': _kGreen,
+    'Converted': _kGreen,
+    'Lost': _kGreen,
   };
 
   static const Map<String, Color> _statusBgColors = {
-    'New': kPrimaryBg,
+    'Quotation': kPrimaryBg,
     'Follow-up': Color(0xFFFEF3C7),
     'Converted': Color(0xFFDCFCE7),
     'Lost': Color(0xFFFEE2E2),

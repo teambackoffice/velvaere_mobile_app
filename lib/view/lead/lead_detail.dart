@@ -20,7 +20,7 @@ class _LeadDetailPageState extends State<LeadDetailPage> {
 
   static const Map<String, Color> _statusColors = {
     'Lead': Color(0xFF426E4B),
-    'New': kPrimary,
+    'Quotation': kPrimary,
     'Follow-up': kWarning,
     'Converted': kSuccess,
     'Lost': kError,
@@ -28,7 +28,7 @@ class _LeadDetailPageState extends State<LeadDetailPage> {
 
   static const Map<String, Color> _statusBgColors = {
     'Lead': Color(0xFFD1FAE5),
-    'New': kPrimaryBg,
+    'Quotation': kPrimaryBg,
     'Follow-up': Color(0xFFFEF3C7),
     'Converted': Color(0xFFDCFCE7),
     'Lost': Color(0xFFFEE2E2),
